@@ -40,6 +40,10 @@ body {
   width: 100%;
 }
 
+:focus, :focus-visible {
+    outline: none !important;
+}
+
 /* Mobile optimizations */
 @media (max-width: 768px) {
   body {

@@ -47,14 +47,15 @@
 
             <!-- Control Card -->
             <n-card title="⚙️ Điều khiển" class="glass-card" :bordered="false">
-              <n-form :label-placement="isMobile ? 'top' : 'left'" label-width="120">
-                <n-form-item label="🌐 Domain Server">
+              <n-form :label-placement="isMobile ? 'top' : 'left'" label-width="140" :label-align="isMobile ? 'left' : 'left'">
+                <n-form-item label="🌐 Domain">
                   <n-input 
                     v-model:value="domainServer" 
                     placeholder="vubq.serveousercontent.com"
                     @update:value="handleDomainChange"
                     size="large"
                     :disabled="isRunning"
+                    style="text-align: left;"
                   >
                     <template #prefix>
                       <span style="opacity: 0.6;">https://</span>
@@ -68,23 +69,21 @@
                     :options="autoTypeOptions"
                     size="large"
                     :disabled="isRunning"
+                    style="text-align: left;"
                   />
                 </n-form-item>
 
-                <n-form-item label="📋 Scenario">
-                  <n-input 
+                <n-form-item label="📋 Kịch bản" v-if="autoType === 'Cường hóa' || autoType === 'Tẩy thuộc tính'">
+                  <n-select 
                     v-model:value="scenario" 
-                    placeholder="Ví dụ: Giáp, Găng, Giày..."
+                    :options="scenarioOptions"
                     size="large"
                     :disabled="isRunning"
-                  >
-                    <template #suffix>
-                      <span style="opacity: 0.4; font-size: 12px;">Tùy chọn</span>
-                    </template>
-                  </n-input>
+                    style="text-align: left;"
+                  />
                 </n-form-item>
 
-                <n-form-item label="🔍 Tìm Boss">
+                <n-form-item label="🔍 Thiết lập B" v-if="autoType === 'Trang bị'">
                   <n-switch 
                     v-model:value="searchB" 
                     :disabled="isRunning"
@@ -132,15 +131,20 @@
             </n-card>
 
             <!-- Log Viewer (Mobile only here) -->
-            <n-card v-if="isMobile" title="📋 Log" class="glass-card" :bordered="false">
-              <template #header-extra>
-                <n-button 
-                  text 
-                  @click="logContent = 'Chọn file để xem nội dung...'"
-                  size="small"
-                >
-                  🗑️ Xóa
-                </n-button>
+            <n-card v-if="isMobile" class="glass-card" :bordered="false">
+              <template #header>
+                <div class="card-header">
+                  <span>📋 Log</span>
+                  <n-button 
+                    @click="logContent = 'Chọn file để xem nội dung...'"
+                    tertiary
+                    :loading="logLoading"
+                  >
+                    <template #icon>
+                      <span style="font-size: 18px;">🔄</span>
+                    </template>
+                  </n-button>
+                </div>
               </template>
               <n-spin :show="logLoading">
                 <div class="log-container">
@@ -155,16 +159,20 @@
         <n-gi v-if="!isMobile" :span="8">
           <n-space vertical :size="16">
             <!-- Log Viewer -->
-            <n-card title="📋 Log Viewer" class="glass-card log-card" :bordered="false">
-              <template #header-extra>
-                <n-button 
-                  text 
-                  @click="logContent = 'Chọn file để xem nội dung...'"
-                  size="small"
-                  type="error"
-                >
-                  🗑️
-                </n-button>
+            <n-card class="glass-card log-card" :bordered="false">
+              <template #header>
+                <div class="card-header">
+                  <span>📋 Log Viewer</span>
+                  <n-button 
+                    :loading="logLoading"
+                    @click="logContent = 'Chọn file để xem nội dung...'"
+                    tertiary
+                  >
+                    <template #icon>
+                      <span style="font-size: 18px;">🔄</span>
+                    </template>
+                  </n-button>
+                </div>
               </template>
               <n-spin :show="logLoading">
                 <div class="log-container">
@@ -182,15 +190,13 @@
               <div class="card-header">
                 <span>📁 Quản lý File</span>
                 <n-button 
-                  type="primary" 
                   @click="handleLoadFiles"
                   :loading="filesLoading"
-                  size="medium"
+                  tertiary
                 >
                   <template #icon>
-                    <span>📂</span>
+                    <span style="font-size: 18px;">🔄</span>
                   </template>
-                  {{ isMobile ? 'Tải' : 'Tải danh sách' }}
                 </n-button>
               </div>
             </template>
@@ -219,7 +225,7 @@
                       class="action-icon-btn"
                       title="Xem file"
                     >
-                      👁️
+                      👀
                     </n-button>
                     <n-button 
                       text
@@ -278,7 +284,7 @@ const isRunning = ref(false)
 const lastUpdate = ref(null)
 const domainServer = ref('vubq.serveousercontent.com')
 const autoType = ref('Trang bị')
-const scenario = ref('')
+const scenario = ref('Ô 1')
 const searchB = ref(false)
 const files = ref([])
 const logContent = ref('Chọn file để xem nội dung...')
@@ -301,7 +307,21 @@ const autoTypeOptions = [
   { label: '🎁 Rương trang bị thú', value: 'Rương trang bị thú' },
   { label: '👔 Đai lưng', value: 'Đai lưng' },
   { label: '👑 Đai lưng MAX', value: 'Đai lưng MAX' },
-  { label: '🏰 Hầm ngục', value: 'Hầm ngục' }
+  { label: '🏰 Hầm ngục', value: 'Hầm ngục' },
+  { label: '🔄 Backup', value: 'Backup' },
+  { label: '🔄 Restore', value: 'Restore' },
+  { label: '⚔️ Test', value: 'Test' }
+]
+
+const scenarioOptions = [
+  { label: '📋 Ô 1', value: 'Ô 1' },
+  { label: '📋 Ô 2', value: 'Ô 2' },
+  { label: '📋 Ô 3', value: 'Ô 3' },
+  { label: '📋 Ô 4', value: 'Ô 4' },
+  { label: '📋 Ô 5', value: 'Ô 5' },
+  { label: '📋 Ô 6', value: 'Ô 6' },
+  { label: '📋 Ô 7', value: 'Ô 7' },
+  { label: '📋 Ô 8', value: 'Ô 8' },
 ]
 
 // Computed
