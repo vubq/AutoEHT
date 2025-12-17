@@ -1,30 +1,55 @@
-<script setup>
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
-  </div>
-  <HelloWorld msg="Vite + Vue" />
+  <n-config-provider :theme-overrides="themeOverrides">
+    <n-message-provider>
+      <n-dialog-provider>
+        <AutoControl />
+      </n-dialog-provider>
+    </n-message-provider>
+  </n-config-provider>
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+<script setup>
+import { NConfigProvider, NMessageProvider, NDialogProvider } from 'naive-ui'
+import AutoControl from './components/AutoControl.vue'
+
+const themeOverrides = {
+  common: {
+    primaryColor: '#667eea',
+    primaryColorHover: '#764ba2',
+    primaryColorPressed: '#5568d3'
+  }
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+</script>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#app {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 13px;
+  }
 }
 </style>
