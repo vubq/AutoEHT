@@ -38,6 +38,9 @@
               <div class="status-info">
                 <div class="status-title">{{ statusTitle }}</div>
                 <div class="status-message">{{ statusMessage }}</div>
+                <div v-if="lastUpdate" class="status-time">
+                  Cập nhật: {{ formatTime(lastUpdate) }}
+                </div>
               </div>
               <div class="status-indicator" :class="{ 'indicator-active': isRunning }"></div>
             </div>
@@ -51,6 +54,7 @@
                     placeholder="vubq.serveousercontent.com"
                     @update:value="handleDomainChange"
                     size="large"
+                    :disabled="isRunning"
                   >
                     <template #prefix>
                       <span style="opacity: 0.6;">https://</span>
@@ -63,14 +67,16 @@
                     v-model:value="autoType" 
                     :options="autoTypeOptions"
                     size="large"
+                    :disabled="isRunning"
                   />
                 </n-form-item>
 
-                <n-form-item label="📝 Scenario">
+                <n-form-item label="📋 Scenario">
                   <n-input 
                     v-model:value="scenario" 
                     placeholder="Ví dụ: Giáp, Găng, Giày..."
                     size="large"
+                    :disabled="isRunning"
                   >
                     <template #suffix>
                       <span style="opacity: 0.4; font-size: 12px;">Tùy chọn</span>
@@ -78,11 +84,26 @@
                   </n-input>
                 </n-form-item>
 
+                <n-form-item label="🔍 Tìm Boss">
+                  <n-switch 
+                    v-model:value="searchB" 
+                    :disabled="isRunning"
+                  >
+                    <template #checked>
+                      Bật
+                    </template>
+                    <template #unchecked>
+                      Tắt
+                    </template>
+                  </n-switch>
+                </n-form-item>
+
                 <n-space :vertical="isMobile" :size="12" style="width: 100%; margin-top: 8px;">
                   <n-button 
                     type="success" 
                     @click="handleStart"
                     :loading="startLoading"
+                    :disabled="isRunning"
                     size="large"
                     :block="isMobile"
                     class="action-btn start-btn"
@@ -96,6 +117,7 @@
                     type="error" 
                     @click="handleStop"
                     :loading="stopLoading"
+                    :disabled="!isRunning"
                     size="large"
                     :block="isMobile"
                     class="action-btn stop-btn"
@@ -111,6 +133,15 @@
 
             <!-- Log Viewer (Mobile only here) -->
             <n-card v-if="isMobile" title="📋 Log" class="glass-card" :bordered="false">
+              <template #header-extra>
+                <n-button 
+                  text 
+                  @click="logContent = 'Chọn file để xem nội dung...'"
+                  size="small"
+                >
+                  🗑️ Xóa
+                </n-button>
+              </template>
               <n-spin :show="logLoading">
                 <div class="log-container">
                   <pre class="log-content">{{ logContent }}</pre>
@@ -125,6 +156,16 @@
           <n-space vertical :size="16">
             <!-- Log Viewer -->
             <n-card title="📋 Log Viewer" class="glass-card log-card" :bordered="false">
+              <template #header-extra>
+                <n-button 
+                  text 
+                  @click="logContent = 'Chọn file để xem nội dung...'"
+                  size="small"
+                  type="error"
+                >
+                  🗑️
+                </n-button>
+              </template>
               <n-spin :show="logLoading">
                 <div class="log-container">
                   <pre class="log-content">{{ logContent }}</pre>
@@ -157,15 +198,18 @@
             <n-spin :show="filesLoading">
               <div v-if="files.length > 0" class="file-grid">
                 <div 
-                  v-for="file in files" 
+                  v-for="file in sortedFiles" 
                   :key="file.name" 
                   class="file-card-item"
                   @click="handleViewFile(file.name)"
                 >
-                  <div class="file-icon">📄</div>
+                  <div class="file-icon">{{ getFileIcon(file.name) }}</div>
                   <div class="file-info">
                     <div class="file-name" :title="file.name">{{ file.name }}</div>
-                    <div class="file-size">{{ formatFileSize(file.size) }}</div>
+                    <div class="file-meta">
+                      <span class="file-size">{{ formatFileSize(file.size) }}</span>
+                      <span class="file-date">{{ formatDate(file.modified) }}</span>
+                    </div>
                   </div>
                   <div class="file-actions" @click.stop>
                     <n-button 
@@ -173,6 +217,7 @@
                       type="primary" 
                       @click="handleViewFile(file.name)"
                       class="action-icon-btn"
+                      title="Xem file"
                     >
                       👁️
                     </n-button>
@@ -181,6 +226,7 @@
                       type="error" 
                       @click="handleDeleteFile(file.name)"
                       class="action-icon-btn"
+                      title="Xóa file"
                     >
                       🗑️
                     </n-button>
@@ -195,6 +241,11 @@
                 <template #icon>
                   <span style="font-size: 48px;">📂</span>
                 </template>
+                <template #extra>
+                  <n-button @click="handleLoadFiles" type="primary" size="small">
+                    Tải lại
+                  </n-button>
+                </template>
               </n-empty>
             </n-spin>
           </n-card>
@@ -208,7 +259,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { 
   NCard, NSpace, NButton, NFormItem, NInput, NForm,
-  NSelect, NSpin, NEmpty, NGrid, NGi,
+  NSelect, NSpin, NEmpty, NGrid, NGi, NSwitch,
   useMessage, useDialog
 } from 'naive-ui'
 import autoService from '../api/autoService'
@@ -224,9 +275,11 @@ const filesLoading = ref(false)
 const logLoading = ref(false)
 
 const isRunning = ref(false)
+const lastUpdate = ref(null)
 const domainServer = ref('vubq.serveousercontent.com')
 const autoType = ref('Trang bị')
 const scenario = ref('')
+const searchB = ref(false)
 const files = ref([])
 const logContent = ref('Chọn file để xem nội dung...')
 
@@ -242,12 +295,12 @@ const autoTypeOptions = [
   { label: '🛡️ Trang bị', value: 'Trang bị' },
   { label: '⚔️ Cường hóa', value: 'Cường hóa' },
   { label: '✨ Tẩy thuộc tính', value: 'Tẩy thuộc tính' },
-  { label: '🐎 Thú cưỡi', value: 'Thú cưỡi' },
+  { label: '🎯 Thú cưỡi', value: 'Thú cưỡi' },
   { label: '🎁 Rương boss', value: 'Rương boss' },
   { label: '🎭 Tính cách', value: 'Tính cách' },
   { label: '🎁 Rương trang bị thú', value: 'Rương trang bị thú' },
   { label: '👔 Đai lưng', value: 'Đai lưng' },
-  { label: '👔 Đai lưng MAX', value: 'Đai lưng MAX' },
+  { label: '👑 Đai lưng MAX', value: 'Đai lưng MAX' },
   { label: '🏰 Hầm ngục', value: 'Hầm ngục' }
 ]
 
@@ -258,6 +311,10 @@ const statusMessage = computed(() => {
   return isRunning.value ? 'Auto đang chạy bình thường' : 'Nhấn khởi động để bắt đầu'
 })
 
+const sortedFiles = computed(() => {
+  return [...files.value].sort((a, b) => b.modified - a.modified)
+})
+
 // Methods
 const formatFileSize = (bytes) => {
   if (bytes < 1024) return bytes + ' B'
@@ -265,34 +322,90 @@ const formatFileSize = (bytes) => {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
+const formatDate = (timestamp) => {
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diff = now - date
+  
+  if (diff < 60000) return 'Vừa xong'
+  if (diff < 3600000) return Math.floor(diff / 60000) + ' phút trước'
+  if (diff < 86400000) return Math.floor(diff / 3600000) + ' giờ trước'
+  
+  return date.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const formatTime = (timestamp) => {
+  return new Date(timestamp).toLocaleTimeString('vi-VN')
+}
+
+const getFileIcon = (filename) => {
+  const ext = filename.split('.').pop().toLowerCase()
+  const icons = {
+    'log': '📄',
+    'txt': '📝',
+    'json': '📊'
+  }
+  return icons[ext] || '📄'
+}
+
 const handleDomainChange = (value) => {
   autoService.setBaseUrl(value)
+  message.info('Đã cập nhật domain server')
 }
 
 const checkStatus = async () => {
   try {
     loading.value = true
-    const data = await autoService.checkStatus()
-    isRunning.value = data.running
+    const result = await autoService.checkStatus()
+    
+    if (result.success) {
+      isRunning.value = result.data.running
+      lastUpdate.value = result.data.timestamp
+    } else {
+      isRunning.value = false
+      if (import.meta.env.DEV) {
+        console.warn('Status check failed:', result.error)
+      }
+    }
   } catch (error) {
-    message.error('Không thể kết nối đến server')
+    if (import.meta.env.DEV) {
+      console.error('Status check error:', error)
+    }
     isRunning.value = false
   } finally {
     loading.value = false
   }
 }
 
-const handleRefreshStatus = () => {
-  checkStatus()
-  message.info('Đang làm mới trạng thái...')
+const handleRefreshStatus = async () => {
+  await checkStatus()
+  message.info('Đã làm mới trạng thái')
 }
 
 const handleStart = async () => {
+  if (!autoType.value) {
+    message.warning('Vui lòng chọn loại auto')
+    return
+  }
+
   try {
     startLoading.value = true
-    const data = await autoService.startAuto(autoType.value, scenario.value)
-    message.success(data.message)
-    await checkStatus()
+    const result = await autoService.startAuto(autoType.value, scenario.value, searchB.value)
+    
+    if (result.success) {
+      message.success(result.message)
+      await checkStatus()
+      // Auto load files sau khi start
+      // setTimeout(() => handleLoadFiles(), 2000)
+    } else {
+      message.error(result.error || 'Không thể khởi động auto')
+    }
   } catch (error) {
     message.error('Lỗi: ' + error.message)
   } finally {
@@ -303,9 +416,14 @@ const handleStart = async () => {
 const handleStop = async () => {
   try {
     stopLoading.value = true
-    const data = await autoService.stopAuto()
-    message.success(data.message)
-    await checkStatus()
+    const result = await autoService.stopAuto()
+    
+    if (result.success) {
+      message.success(result.message)
+      await checkStatus()
+    } else {
+      message.error(result.error || 'Không thể dừng auto')
+    }
   } catch (error) {
     message.error('Lỗi: ' + error.message)
   } finally {
@@ -316,12 +434,14 @@ const handleStop = async () => {
 const handleLoadFiles = async () => {
   try {
     filesLoading.value = true
-    const data = await autoService.getFiles()
-    if (data.success) {
-      files.value = data.files
-      message.success(`Đã tải ${data.files.length} file`)
+    const result = await autoService.getFiles()
+    
+    if (result.success) {
+      files.value = result.files || []
+      message.success(`Đã tải ${files.value.length} file`)
     } else {
       files.value = []
+      message.warning(result.error || 'Không có file nào')
     }
   } catch (error) {
     message.error('Không thể tải danh sách file')
@@ -334,16 +454,17 @@ const handleLoadFiles = async () => {
 const handleViewFile = async (filename) => {
   try {
     logLoading.value = true
-    const data = await autoService.viewFile(filename)
-    if (data.success) {
-      logContent.value = data.content || '(File trống)'
-      message.success('Đã tải file: ' + filename)
+    const result = await autoService.viewFile(filename)
+    
+    if (result.success) {
+      logContent.value = result.content || '(File trống)'
+      message.success(`Đã tải file: ${filename}`)
     } else {
-      logContent.value = 'Lỗi: ' + data.error
+      logContent.value = `Lỗi: ${result.error}`
       message.error('Không thể đọc file')
     }
   } catch (error) {
-    logContent.value = 'Lỗi: ' + error.message
+    logContent.value = `Lỗi: ${error.message}`
     message.error('Không thể tải file')
   } finally {
     logLoading.value = false
@@ -358,9 +479,18 @@ const handleDeleteFile = (filename) => {
     negativeText: 'Hủy',
     onPositiveClick: async () => {
       try {
-        const data = await autoService.deleteFile(filename)
-        message.success(data.message)
-        await handleLoadFiles()
+        const result = await autoService.deleteFile(filename)
+        
+        if (result.success) {
+          message.success(result.message)
+          await handleLoadFiles()
+          // Clear log nếu đang xem file bị xóa
+          if (logContent.value.includes(filename)) {
+            logContent.value = 'Chọn file để xem nội dung...'
+          }
+        } else {
+          message.error(result.error || 'Không thể xóa file')
+        }
       } catch (error) {
         message.error('Không thể xóa file')
       }
@@ -374,7 +504,11 @@ let statusInterval = null
 onMounted(() => {
   autoService.setBaseUrl(domainServer.value)
   checkStatus()
+  handleLoadFiles()
+  
+  // Auto refresh every 5 seconds
   statusInterval = setInterval(checkStatus, 5000)
+  
   window.addEventListener('resize', handleResize)
 })
 
@@ -506,6 +640,12 @@ onUnmounted(() => {
   color: #6b7280;
 }
 
+.status-time {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
 .status-indicator {
   width: 16px;
   height: 16px;
@@ -557,7 +697,7 @@ onUnmounted(() => {
   transition: all 0.3s ease;
 }
 
-.action-btn:hover {
+.action-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0,0,0,0.15);
 }
@@ -646,9 +786,18 @@ onUnmounted(() => {
   margin-bottom: 4px;
 }
 
-.file-size {
+.file-meta {
+  display: flex;
+  gap: 12px;
   font-size: 12px;
+}
+
+.file-size {
   color: #6b7280;
+}
+
+.file-date {
+  color: #9ca3af;
 }
 
 .file-actions {

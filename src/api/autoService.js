@@ -6,39 +6,88 @@ class AutoService {
   }
 
   setBaseUrl(domain) {
-    this.baseUrl = `https://${domain}`
+    this.baseUrl = domain.startsWith('http') ? domain : `https://${domain}`
   }
 
   async checkStatus() {
-    const response = await http.get(`${this.baseUrl}/status`)
-    return response.data
+    try {
+      const response = await http.get(`${this.baseUrl}/status`)
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      }
+    }
   }
 
-  async startAuto(type, scenario = '') {
-    const url = `${this.baseUrl}/start/${encodeURIComponent(type)}`
-    const params = scenario ? { scenario } : {}
-    const response = await http.post(url, null, { params })
-    return response.data
+  async startAuto(type, scenario = '', searchB = false) {
+    try {
+      const params = new URLSearchParams()
+      if (scenario) params.append('scenario', scenario)
+      params.append('searchB', searchB.toString())
+      
+      const url = `${this.baseUrl}/start/${encodeURIComponent(type)}${params.toString() ? '?' + params.toString() : ''}`
+      const response = await http.post(url)
+      return response.data
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      }
+    }
   }
 
   async stopAuto() {
-    const response = await http.post(`${this.baseUrl}/stop`)
-    return response.data
+    try {
+      const response = await http.post(`${this.baseUrl}/stop`)
+      return response.data
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      }
+    }
   }
 
   async getFiles() {
-    const response = await http.get(`${this.baseUrl}/files`)
-    return response.data
+    try {
+      const response = await http.get(`${this.baseUrl}/files`)
+      return response.data
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        files: []
+      }
+    }
   }
 
   async viewFile(filename) {
-    const response = await http.get(`${this.baseUrl}/logs/${encodeURIComponent(filename)}`)
-    return response.data
+    try {
+      const response = await http.get(`${this.baseUrl}/logs/${encodeURIComponent(filename)}`)
+      return response.data
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      }
+    }
   }
 
   async deleteFile(filename) {
-    const response = await http.delete(`${this.baseUrl}/files/${encodeURIComponent(filename)}`)
-    return response.data
+    try {
+      const response = await http.delete(`${this.baseUrl}/files/${encodeURIComponent(filename)}`)
+      return response.data
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      }
+    }
   }
 }
 
