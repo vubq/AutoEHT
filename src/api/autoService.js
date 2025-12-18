@@ -1,12 +1,14 @@
 import http from './http.js'
+import authService from './authService.js'
 
 class AutoService {
   constructor() {
-    this.baseUrl = 'https://vubq.serveousercontent.com'
+    this.baseUrl = 'vubq.serveousercontent.com'
   }
 
   setBaseUrl(domain) {
     this.baseUrl = domain.startsWith('http') ? domain : `https://${domain}`
+    authService.setBaseUrl(domain)
   }
 
   async checkStatus() {
@@ -29,7 +31,7 @@ class AutoService {
       const params = new URLSearchParams()
       if (scenario) params.append('scenario', scenario)
       params.append('searchB', searchB.toString())
-      
+
       const url = `${this.baseUrl}/start/${encodeURIComponent(type)}${params.toString() ? '?' + params.toString() : ''}`
       const response = await http.post(url)
       return response.data
@@ -87,6 +89,23 @@ class AutoService {
         success: false,
         error: error.message
       }
+    }
+  }
+
+  async updateFile(filename, content) {
+    try {
+      const response = await http.post(
+        `${this.baseUrl}/files/${encodeURIComponent(filename)}`,
+        { content }
+      )
+      return {
+        success: true,
+        message: response.data.message || 'Cập nhật thành công',
+        data: response.data
+      }
+    } catch (error) {
+      const errMsg = error.response?.data?.error || error.message || 'Lỗi cập nhật file'
+      return { success: false, error: errMsg }
     }
   }
 }

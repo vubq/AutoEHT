@@ -11,11 +11,11 @@
           </div>
         </div>
         <n-button
-          type="primary"
-          :size="isMobile ? 'medium' : 'large'"
-          @click="handleRefreshStatus"
-          :loading="loading"
-          class="refresh-btn"
+            type="primary"
+            :size="isMobile ? 'medium' : 'large'"
+            @click="handleRefreshStatus"
+            :loading="loading"
+            class="refresh-btn"
         >
           <template #icon>
             <span style="font-size: 18px;">🔄</span>
@@ -50,12 +50,12 @@
               <n-form :label-placement="isMobile ? 'top' : 'left'" label-width="140" :label-align="isMobile ? 'left' : 'left'">
                 <n-form-item label="🌐 Domain">
                   <n-input
-                    v-model:value="domainServer"
-                    placeholder="vubq.serveousercontent.com"
-                    @update:value="handleDomainChange"
-                    size="large"
-                    :disabled="isRunning"
-                    style="text-align: left;"
+                      v-model:value="domainServer"
+                      placeholder="vubq.serveousercontent.com"
+                      @update:value="handleDomainChange"
+                      size="large"
+                      :disabled="isRunning"
+                      style="text-align: left;"
                   >
                     <template #prefix>
                       <span style="opacity: 0.6;">https://</span>
@@ -65,28 +65,28 @@
 
                 <n-form-item label="🎯 Loại Auto">
                   <n-select
-                    v-model:value="autoType"
-                    :options="autoTypeOptions"
-                    size="large"
-                    :disabled="isRunning"
-                    style="text-align: left;"
+                      v-model:value="autoType"
+                      :options="autoTypeOptions"
+                      size="large"
+                      :disabled="isRunning"
+                      style="text-align: left;"
                   />
                 </n-form-item>
 
                 <n-form-item label="📋 Kịch bản" v-if="autoType === 'Trang bị' || autoType === 'Cường hóa' || autoType === 'Tẩy thuộc tính'">
                   <n-select
-                    v-model:value="scenario"
-                    :options="scenarioOptions"
-                    size="large"
-                    :disabled="isRunning"
-                    style="text-align: left;"
+                      v-model:value="scenario"
+                      :options="scenarioOptions"
+                      size="large"
+                      :disabled="isRunning"
+                      style="text-align: left;"
                   />
                 </n-form-item>
 
                 <n-form-item label="🔍 Thiết lập B" v-if="autoType === 'Trang bị'">
                   <n-switch
-                    v-model:value="searchB"
-                    :disabled="isRunning"
+                      v-model:value="searchB"
+                      :disabled="isRunning"
                   >
                     <template #checked>
                       Bật
@@ -99,13 +99,13 @@
 
                 <n-space :vertical="isMobile" :size="12" style="width: 100%; margin-top: 8px;">
                   <n-button
-                    type="success"
-                    @click="handleStart"
-                    :loading="startLoading"
-                    :disabled="isRunning"
-                    size="large"
-                    :block="isMobile"
-                    class="action-btn start-btn"
+                      type="success"
+                      @click="handleStart"
+                      :loading="startLoading"
+                      :disabled="isRunning"
+                      size="large"
+                      :block="isMobile"
+                      class="action-btn start-btn"
                   >
                     <template #icon>
                       <span style="font-size: 16px;">▶️</span>
@@ -113,13 +113,13 @@
                     Khởi động Auto
                   </n-button>
                   <n-button
-                    type="error"
-                    @click="handleStop"
-                    :loading="stopLoading"
-                    :disabled="!isRunning"
-                    size="large"
-                    :block="isMobile"
-                    class="action-btn stop-btn"
+                      type="error"
+                      @click="handleStop"
+                      :loading="stopLoading"
+                      :disabled="!isRunning"
+                      size="large"
+                      :block="isMobile"
+                      class="action-btn stop-btn"
                   >
                     <template #icon>
                       <span style="font-size: 16px;">⏹️</span>
@@ -135,20 +135,53 @@
               <template #header>
                 <div class="card-header">
                   <span>📋 Log</span>
-                  <n-button
-                    @click="logContent = 'Chọn file để xem nội dung...'"
-                    tertiary
-                    :loading="logLoading"
-                  >
-                    <template #icon>
-                      <span style="font-size: 18px;">🗑️</span>
-                    </template>
-                  </n-button>
+                  <n-space :size="8">
+                    <n-button
+                        v-if="isEditMode"
+                        @click="handleSaveEdit"
+                        :loading="saveLoading"
+                        size="small"
+                        tertiary
+                    >
+                      <template #icon>
+                        <span>💾</span>
+                      </template>
+                    </n-button>
+                    <n-button
+                        v-if="currentFilename"
+                        @click="toggleEditMode"
+                        :type="isEditMode ? 'warning' : 'info'"
+                        size="small"
+                        tertiary
+                    >
+                      <template #icon>
+                        <span>{{ isEditMode ? '❌' : '✏️' }}</span>
+                      </template>
+                    </n-button>
+                    <n-button
+                        @click="handleClearLog"
+                        tertiary
+                        :loading="logLoading"
+                        size="small"
+                    >
+                      <template #icon>
+                        <span>🗑️</span>
+                      </template>
+                    </n-button>
+                  </n-space>
                 </div>
               </template>
               <n-spin :show="logLoading">
                 <div class="log-container">
-                  <div class="log-lines">
+                  <n-input
+                      v-if="isEditMode"
+                      v-model:value="editContent"
+                      type="textarea"
+                      :rows="15"
+                      class="edit-textarea"
+                      style="border: none !important; text-align: left;"
+                  />
+                  <div v-else class="log-lines">
                     <div
                         v-for="(line, index) in logLines"
                         :key="index"
@@ -175,20 +208,54 @@
               <template #header>
                 <div class="card-header">
                   <span>📋 Log Viewer</span>
-                  <n-button
-                    :loading="logLoading"
-                    @click="logContent = 'Chọn file để xem nội dung...'"
-                    tertiary
-                  >
-                    <template #icon>
-                      <span style="font-size: 18px;">🗑️</span>
-                    </template>
-                  </n-button>
+                  <n-space :size="8">
+                    <n-button
+                        v-if="isEditMode"
+                        @click="handleSaveEdit"
+                        type="success"
+                        :loading="saveLoading"
+                        size="small"
+                        tertiary
+                    >
+                      <template #icon>
+                        <span>💾</span>
+                      </template>
+                    </n-button>
+                    <n-button
+                        v-if="currentFilename"
+                        @click="toggleEditMode"
+                        :type="isEditMode ? 'warning' : 'info'"
+                        size="small"
+                        tertiary
+                    >
+                      <template #icon>
+                        <span>{{ isEditMode ? '❌' : '✏️' }}</span>
+                      </template>
+                    </n-button>
+                    <n-button
+                        @click="handleClearLog"
+                        :loading="logLoading"
+                        tertiary
+                        size="small"
+                    >
+                      <template #icon>
+                        <span>🗑️</span>
+                      </template>
+                    </n-button>
+                  </n-space>
                 </div>
               </template>
               <n-spin :show="logLoading">
                 <div class="log-container">
-                  <div class="log-lines">
+                  <n-input
+                      v-if="isEditMode"
+                      v-model:value="editContent"
+                      type="textarea"
+                      :rows="20"
+                      class="edit-textarea"
+                      style="border: none !important; text-align: left;"
+                  />
+                  <div v-else class="log-lines">
                     <div
                         v-for="(line, index) in logLines"
                         :key="index"
@@ -214,9 +281,9 @@
               <div class="card-header">
                 <span>📁 Quản lý File</span>
                 <n-button
-                  @click="handleLoadFiles"
-                  :loading="filesLoading"
-                  tertiary
+                    @click="handleLoadFiles"
+                    :loading="filesLoading"
+                    tertiary
                 >
                   <template #icon>
                     <span style="font-size: 18px;">🔄</span>
@@ -228,10 +295,11 @@
             <n-spin :show="filesLoading">
               <div v-if="files.length > 0" class="file-grid">
                 <div
-                  v-for="file in sortedFiles"
-                  :key="file.name"
-                  class="file-card-item"
-                  @click="handleViewFile(file.name)"
+                    v-for="file in sortedFiles"
+                    :key="file.name"
+                    class="file-card-item"
+                    :class="{ 'file-active': currentFilename === file.name }"
+                    @click="handleViewFile(file.name)"
                 >
                   <div class="file-icon">{{ getFileIcon(file.name) }}</div>
                   <div class="file-info">
@@ -243,30 +311,45 @@
                   </div>
                   <div class="file-actions" @click.stop>
                     <n-button
-                      text
-                      type="primary"
-                      @click="handleViewFile(file.name)"
-                      class="action-icon-btn"
-                      title="Xem file"
+                        text
+                        type="primary"
+                        @click="handleViewFile(file.name)"
+                        class="action-icon-btn"
+                        size="tiny"
                     >
-                      👀
+                      <template #icon>
+                        <span style="font-size: 13px;">👀</span>
+                      </template>
                     </n-button>
                     <n-button
-                      text
-                      type="error"
-                      @click="handleDeleteFile(file.name)"
-                      class="action-icon-btn"
-                      title="Xóa file"
+                        text
+                        type="info"
+                        @click="handleEditFile(file.name)"
+                        class="action-icon-btn"
+                        size="tiny"
                     >
-                      🗑️
+                      <template #icon>
+                        <span style="font-size: 13px;">✏️</span>
+                      </template>
+                    </n-button>
+                    <n-button
+                        text
+                        type="error"
+                        @click="handleDeleteFile(file.name)"
+                        class="action-icon-btn"
+                        size="tiny"
+                    >
+                      <template #icon>
+                        <span style="font-size: 13px;">🗑️</span>
+                      </template>
                     </n-button>
                   </div>
                 </div>
               </div>
               <n-empty
-                v-else
-                description="Chưa có file nào"
-                class="empty-state"
+                  v-else
+                  description="Chưa có file nào"
+                  class="empty-state"
               >
                 <template #icon>
                   <span style="font-size: 48px;">📂</span>
@@ -303,6 +386,7 @@ const startLoading = ref(false)
 const stopLoading = ref(false)
 const filesLoading = ref(false)
 const logLoading = ref(false)
+const saveLoading = ref(false)
 
 const isRunning = ref(false)
 const lastUpdate = ref(null)
@@ -312,6 +396,12 @@ const scenario = ref('Giáp')
 const searchB = ref(false)
 const files = ref([])
 const logContent = ref('Chọn file để xem nội dung...')
+const currentFilename = ref('')
+
+// Edit mode
+const isEditMode = ref(false)
+const editContent = ref('')
+const originalContent = ref('')
 
 // Responsive
 const isMobile = ref(window.innerWidth <= 768)
@@ -325,15 +415,16 @@ const autoTypeOptions = [
   { label: '🛡️ Trang bị', value: 'Trang bị' },
   { label: '⚔️ Cường hóa', value: 'Cường hóa' },
   { label: '🧬 Tẩy thuộc tính', value: 'Tẩy thuộc tính' },
-  { label: '🐎 Thú cưỡi', value: 'Thú cưỡi' },
+  { label: '🎁 Thú cưỡi', value: 'Thú cưỡi' },
   { label: '📦 Rương boss', value: 'Rương boss' },
   { label: '🎭 Tính cách', value: 'Tính cách' },
   { label: '📦 Rương trang bị thú', value: 'Rương trang bị thú' },
-  { label: '👖 Đai lưng', value: 'Đai lưng' },
+  { label: '💖 Đai lưng', value: 'Đai lưng' },
   { label: '👑 Đai lưng MAX', value: 'Đai lưng MAX' },
   { label: '🏰 Hầm ngục', value: 'Hầm ngục' },
   { label: '💾 Backup', value: 'Backup' },
   { label: '♻️ Restore', value: 'Restore' },
+  { label: '📜 Script', value: 'Script' },
   { label: '🧪 Test', value: 'Test' },
 ]
 
@@ -384,8 +475,97 @@ const logLines = computed(() => {
   if (!logContent.value || logContent.value.includes('Chọn file') || logContent.value.includes('Lỗi:')) {
     return []
   }
-  return logContent.value.split('\n')
+  const lines = logContent.value
+      .split('\n')
+      .filter(line => line.trim() !== '')
+  return lines.reverse()
 })
+
+// Edit mode methods
+const toggleEditMode = () => {
+  if (!currentFilename.value) {
+    message.warning('Chưa chọn file nào để chỉnh sửa')
+    return
+  }
+
+  if (isEditMode.value) {
+    // Cancel edit
+    dialog.warning({
+      title: '❌ Hủy chỉnh sửa',
+      content: 'Bạn có chắc muốn hủy các thay đổi?',
+      positiveText: 'Hủy thay đổi',
+      negativeText: 'Tiếp tục sửa',
+      onPositiveClick: () => {
+        isEditMode.value = false
+        editContent.value = ''
+      }
+    })
+  } else {
+    // Enter edit mode
+    isEditMode.value = true
+    // Convert log lines back to original format
+    editContent.value = originalContent.value
+    message.info('Đã vào chế độ chỉnh sửa')
+  }
+}
+
+const handleSaveEdit = async () => {
+  if (!currentFilename.value) {
+    message.warning('Không có file để lưu')
+    return
+  }
+
+  if (editContent.value === originalContent.value) {
+    message.info('Không có thay đổi nào')
+    return
+  }
+
+  dialog.info({
+    title: '💾 Xác nhận lưu',
+    content: `Bạn có chắc muốn lưu thay đổi vào file "${currentFilename.value}"?`,
+    positiveText: 'Lưu',
+    negativeText: 'Hủy',
+    onPositiveClick: async () => {
+      try {
+        saveLoading.value = true
+        const result = await autoService.updateFile(currentFilename.value, editContent.value)
+
+        if (result.success) {
+          message.success(result.message)
+          isEditMode.value = false
+          logContent.value = editContent.value
+          originalContent.value = editContent.value
+          // Reload file list to update size and modified time
+          await handleLoadFiles()
+        } else {
+          message.error(result.error || 'Không thể lưu file')
+        }
+      } catch (error) {
+        message.error('Lỗi: ' + error.message)
+      } finally {
+        saveLoading.value = false
+      }
+    }
+  })
+}
+
+const handleClearLog = () => {
+  logContent.value = 'Chọn file để xem nội dung...'
+  currentFilename.value = ''
+  isEditMode.value = false
+  editContent.value = ''
+  originalContent.value = ''
+  message.info('Đã xóa log')
+}
+
+const handleEditFile = async (filename) => {
+  await handleViewFile(filename)
+  setTimeout(() => {
+    if (!isEditMode.value) {
+      toggleEditMode()
+    }
+  }, 100)
+}
 
 // Methods
 const formatFileSize = (bytes) => {
@@ -473,8 +653,6 @@ const handleStart = async () => {
     if (result.success) {
       message.success(result.message)
       await checkStatus()
-      // Auto load files sau khi start
-      // setTimeout(() => handleLoadFiles(), 2000)
     } else {
       message.error(result.error || 'Không thể khởi động auto')
     }
@@ -524,19 +702,28 @@ const handleLoadFiles = async () => {
 }
 
 const handleViewFile = async (filename) => {
+  // Exit edit mode if viewing different file
+  if (isEditMode.value && currentFilename.value !== filename) {
+    isEditMode.value = false
+  }
+
   try {
     logLoading.value = true
+    currentFilename.value = filename
     const result = await autoService.viewFile(filename)
 
     if (result.success) {
       logContent.value = result.content || '(File trống)'
+      originalContent.value = result.content || ''
       message.success(`Đã tải file: ${filename}`)
     } else {
       logContent.value = `Lỗi: ${result.error}`
+      currentFilename.value = ''
       message.error('Không thể đọc file')
     }
   } catch (error) {
     logContent.value = `Lỗi: ${error.message}`
+    currentFilename.value = ''
     message.error('Không thể tải file')
   } finally {
     logLoading.value = false
@@ -556,9 +743,8 @@ const handleDeleteFile = (filename) => {
         if (result.success) {
           message.success(result.message)
           await handleLoadFiles()
-          // Clear log nếu đang xem file bị xóa
-          if (logContent.value.includes(filename)) {
-            logContent.value = 'Chọn file để xem nội dung...'
+          if (currentFilename.value === filename) {
+            handleClearLog()
           }
         } else {
           message.error(result.error || 'Không thể xóa file')
@@ -578,9 +764,7 @@ onMounted(() => {
   checkStatus()
   handleLoadFiles()
 
-  // Auto refresh every 5 seconds
   statusInterval = setInterval(checkStatus, 5000)
-
   window.addEventListener('resize', handleResize)
 })
 
@@ -647,7 +831,7 @@ onUnmounted(() => {
 }
 
 .refresh-btn {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Content Wrapper */
@@ -780,6 +964,68 @@ onUnmounted(() => {
 
 .stop-btn {
   flex: 1;
+}
+
+/* Edit Textarea Styling */
+.edit-textarea {
+  width: 100%;
+}
+
+.edit-textarea :deep(textarea){
+  border: none !important;
+}
+
+.edit-textarea :deep(.n-input-wrapper) {
+  padding: 0;
+}
+
+.edit-textarea :deep(.n-input__border),
+.edit-textarea :deep(.n-input__state-border) {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.edit-textarea :deep(.n-input__textarea-el) {
+  font-family: 'VNF-ComicSans', 'Courier New', monospace !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  color: #10b981 !important;
+  background: #1f2937 !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  //border: 2px solid #374151 !important;
+  transition: all 0.3s ease;
+  min-height: 400px;
+}
+
+.edit-textarea :deep(.n-input__textarea-el):focus {
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+  outline: none !important;
+}
+
+.edit-textarea :deep(.n-input__textarea-el)::selection {
+  background: rgba(16, 185, 129, 0.3);
+  color: #fff;
+}
+
+/* Scrollbar for textarea */
+.edit-textarea :deep(.n-input__textarea-el)::-webkit-scrollbar {
+  width: 8px;
+}
+
+.edit-textarea :deep(.n-input__textarea-el)::-webkit-scrollbar-track {
+  background: #374151;
+  border-radius: 4px;
+}
+
+.edit-textarea :deep(.n-input__textarea-el)::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+.edit-textarea :deep(.n-input__textarea-el)::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
 }
 
 /* Log Container */
@@ -997,7 +1243,7 @@ onUnmounted(() => {
   }
 
   .log-container {
-    max-height: 300px;
+    //max-height: 300px;
   }
 
   .log-content {

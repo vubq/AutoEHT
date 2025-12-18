@@ -1,26 +1,37 @@
 import axios from 'axios'
 
 const http = axios.create({
-  timeout: 15000,
+  timeout: 30000,  // Tăng lên 30s
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    'Accept': 'application/json',
   }
 })
 
-// Request interceptor
+// Request interceptor - Tự động thêm token vào header
 http.interceptors.request.use(
   config => {
+    // Lấy token từ localStorage
+    const token = localStorage.getItem('autoEHT_token')
+
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`
+    }
+
     // Log request cho debugging
     if (import.meta.env.DEV) {
       console.log(`[HTTP] ${config.method.toUpperCase()} ${config.url}`)
+      if (token) {
+        console.log('[HTTP] Token:', token.substring(0, 20) + '...')
+      }
     }
+
     return config
   },
   error => Promise.reject(error)
 )
 
-// Response interceptor
+// Response interceptor - Xử lý lỗi và token hết hạn
 http.interceptors.response.use(
   response => {
     // Log response cho debugging
@@ -31,24 +42,35 @@ http.interceptors.response.use(
   },
   error => {
     let errorMessage = 'Lỗi không xác định'
-    
+
     if (error.response) {
-      // Server trả về response với status code lỗi
+      const status = error.response.status
       const data = error.response.data
-      errorMessage = data.error || data.message || `Lỗi ${error.response.status}`
-      
+
+      // Xử lý lỗi 401 - Unauthorized (token hết hạn hoặc không hợp lệ)
+      if (status === 401) {
+        // Xóa token cũ
+        localStorage.removeItem('autoEHT_token')
+        localStorage.removeItem('autoEHT_expires')
+
+        errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+
+        // Dispatch event để component biết cần đăng nhập lại
+        window.dispatchEvent(new CustomEvent('auth:required'))
+      } else {
+        errorMessage = data.error || data.message || `Lỗi ${status}`
+      }
+
       // Log chi tiết lỗi
       if (import.meta.env.DEV) {
-        console.error(`[HTTP] Error ${error.response.status}:`, errorMessage)
+        console.error(`[HTTP] Error ${status}:`, errorMessage)
       }
     } else if (error.request) {
-      // Request được gửi nhưng không nhận được response
       errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.'
     } else {
-      // Lỗi trong quá trình setup request
       errorMessage = error.message || 'Lỗi khi gửi request'
     }
-    
+
     return Promise.reject(new Error(errorMessage))
   }
 )
