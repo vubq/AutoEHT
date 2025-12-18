@@ -10,8 +10,8 @@
             <p class="subtitle">Hệ thống điều khiển tự động</p>
           </div>
         </div>
-        <n-button 
-          type="primary" 
+        <n-button
+          type="primary"
           :size="isMobile ? 'medium' : 'large'"
           @click="handleRefreshStatus"
           :loading="loading"
@@ -49,8 +49,8 @@
             <n-card title="⚙️ Điều khiển" class="glass-card" :bordered="false">
               <n-form :label-placement="isMobile ? 'top' : 'left'" label-width="140" :label-align="isMobile ? 'left' : 'left'">
                 <n-form-item label="🌐 Domain">
-                  <n-input 
-                    v-model:value="domainServer" 
+                  <n-input
+                    v-model:value="domainServer"
                     placeholder="vubq.serveousercontent.com"
                     @update:value="handleDomainChange"
                     size="large"
@@ -64,8 +64,8 @@
                 </n-form-item>
 
                 <n-form-item label="🎯 Loại Auto">
-                  <n-select 
-                    v-model:value="autoType" 
+                  <n-select
+                    v-model:value="autoType"
                     :options="autoTypeOptions"
                     size="large"
                     :disabled="isRunning"
@@ -73,9 +73,9 @@
                   />
                 </n-form-item>
 
-                <n-form-item label="📋 Kịch bản" v-if="autoType === 'Cường hóa' || autoType === 'Tẩy thuộc tính'">
-                  <n-select 
-                    v-model:value="scenario" 
+                <n-form-item label="📋 Kịch bản" v-if="autoType === 'Trang bị' || autoType === 'Cường hóa' || autoType === 'Tẩy thuộc tính'">
+                  <n-select
+                    v-model:value="scenario"
                     :options="scenarioOptions"
                     size="large"
                     :disabled="isRunning"
@@ -84,8 +84,8 @@
                 </n-form-item>
 
                 <n-form-item label="🔍 Thiết lập B" v-if="autoType === 'Trang bị'">
-                  <n-switch 
-                    v-model:value="searchB" 
+                  <n-switch
+                    v-model:value="searchB"
                     :disabled="isRunning"
                   >
                     <template #checked>
@@ -98,8 +98,8 @@
                 </n-form-item>
 
                 <n-space :vertical="isMobile" :size="12" style="width: 100%; margin-top: 8px;">
-                  <n-button 
-                    type="success" 
+                  <n-button
+                    type="success"
                     @click="handleStart"
                     :loading="startLoading"
                     :disabled="isRunning"
@@ -112,8 +112,8 @@
                     </template>
                     Khởi động Auto
                   </n-button>
-                  <n-button 
-                    type="error" 
+                  <n-button
+                    type="error"
                     @click="handleStop"
                     :loading="stopLoading"
                     :disabled="!isRunning"
@@ -135,20 +135,32 @@
               <template #header>
                 <div class="card-header">
                   <span>📋 Log</span>
-                  <n-button 
+                  <n-button
                     @click="logContent = 'Chọn file để xem nội dung...'"
                     tertiary
                     :loading="logLoading"
                   >
                     <template #icon>
-                      <span style="font-size: 18px;">🔄</span>
+                      <span style="font-size: 18px;">🗑️</span>
                     </template>
                   </n-button>
                 </div>
               </template>
               <n-spin :show="logLoading">
                 <div class="log-container">
-                  <pre class="log-content">{{ logContent }}</pre>
+                  <div class="log-lines">
+                    <div
+                        v-for="(line, index) in logLines"
+                        :key="index"
+                        class="log-line-item"
+                        :class="{ 'log-line-even': index % 2 === 1 }"
+                    >
+                      {{ line || '&nbsp;' }}
+                    </div>
+                    <div v-if="!logLines.length" class="log-empty">
+                      {{ logContent }}
+                    </div>
+                  </div>
                 </div>
               </n-spin>
             </n-card>
@@ -163,20 +175,32 @@
               <template #header>
                 <div class="card-header">
                   <span>📋 Log Viewer</span>
-                  <n-button 
+                  <n-button
                     :loading="logLoading"
                     @click="logContent = 'Chọn file để xem nội dung...'"
                     tertiary
                   >
                     <template #icon>
-                      <span style="font-size: 18px;">🔄</span>
+                      <span style="font-size: 18px;">🗑️</span>
                     </template>
                   </n-button>
                 </div>
               </template>
               <n-spin :show="logLoading">
                 <div class="log-container">
-                  <pre class="log-content">{{ logContent }}</pre>
+                  <div class="log-lines">
+                    <div
+                        v-for="(line, index) in logLines"
+                        :key="index"
+                        class="log-line-item"
+                        :class="{ 'log-line-even': index % 2 === 1 }"
+                    >
+                      {{ line || '&nbsp;' }}
+                    </div>
+                    <div v-if="!logLines.length" class="log-empty">
+                      {{ logContent }}
+                    </div>
+                  </div>
                 </div>
               </n-spin>
             </n-card>
@@ -189,7 +213,7 @@
             <template #header>
               <div class="card-header">
                 <span>📁 Quản lý File</span>
-                <n-button 
+                <n-button
                   @click="handleLoadFiles"
                   :loading="filesLoading"
                   tertiary
@@ -203,9 +227,9 @@
 
             <n-spin :show="filesLoading">
               <div v-if="files.length > 0" class="file-grid">
-                <div 
-                  v-for="file in sortedFiles" 
-                  :key="file.name" 
+                <div
+                  v-for="file in sortedFiles"
+                  :key="file.name"
                   class="file-card-item"
                   @click="handleViewFile(file.name)"
                 >
@@ -218,18 +242,18 @@
                     </div>
                   </div>
                   <div class="file-actions" @click.stop>
-                    <n-button 
+                    <n-button
                       text
-                      type="primary" 
+                      type="primary"
                       @click="handleViewFile(file.name)"
                       class="action-icon-btn"
                       title="Xem file"
                     >
                       👀
                     </n-button>
-                    <n-button 
+                    <n-button
                       text
-                      type="error" 
+                      type="error"
                       @click="handleDeleteFile(file.name)"
                       class="action-icon-btn"
                       title="Xóa file"
@@ -239,9 +263,9 @@
                   </div>
                 </div>
               </div>
-              <n-empty 
-                v-else 
-                description="Chưa có file nào" 
+              <n-empty
+                v-else
+                description="Chưa có file nào"
                 class="empty-state"
               >
                 <template #icon>
@@ -262,8 +286,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { 
+import {ref, computed, onMounted, onUnmounted, watch} from 'vue'
+import {
   NCard, NSpace, NButton, NFormItem, NInput, NForm,
   NSelect, NSpin, NEmpty, NGrid, NGi, NSwitch,
   useMessage, useDialog
@@ -284,7 +308,7 @@ const isRunning = ref(false)
 const lastUpdate = ref(null)
 const domainServer = ref('vubq.serveousercontent.com')
 const autoType = ref('Trang bị')
-const scenario = ref('Ô 1')
+const scenario = ref('Giáp')
 const searchB = ref(false)
 const files = ref([])
 const logContent = ref('Chọn file để xem nội dung...')
@@ -300,29 +324,50 @@ const handleResize = () => {
 const autoTypeOptions = [
   { label: '🛡️ Trang bị', value: 'Trang bị' },
   { label: '⚔️ Cường hóa', value: 'Cường hóa' },
-  { label: '✨ Tẩy thuộc tính', value: 'Tẩy thuộc tính' },
-  { label: '🎯 Thú cưỡi', value: 'Thú cưỡi' },
-  { label: '🎁 Rương boss', value: 'Rương boss' },
+  { label: '🧬 Tẩy thuộc tính', value: 'Tẩy thuộc tính' },
+  { label: '🐎 Thú cưỡi', value: 'Thú cưỡi' },
+  { label: '📦 Rương boss', value: 'Rương boss' },
   { label: '🎭 Tính cách', value: 'Tính cách' },
-  { label: '🎁 Rương trang bị thú', value: 'Rương trang bị thú' },
-  { label: '👔 Đai lưng', value: 'Đai lưng' },
+  { label: '📦 Rương trang bị thú', value: 'Rương trang bị thú' },
+  { label: '👖 Đai lưng', value: 'Đai lưng' },
   { label: '👑 Đai lưng MAX', value: 'Đai lưng MAX' },
   { label: '🏰 Hầm ngục', value: 'Hầm ngục' },
-  { label: '🔄 Backup', value: 'Backup' },
-  { label: '🔄 Restore', value: 'Restore' },
-  { label: '⚔️ Test', value: 'Test' }
+  { label: '💾 Backup', value: 'Backup' },
+  { label: '♻️ Restore', value: 'Restore' },
+  { label: '🧪 Test', value: 'Test' },
 ]
 
-const scenarioOptions = [
-  { label: '📋 Ô 1', value: 'Ô 1' },
-  { label: '📋 Ô 2', value: 'Ô 2' },
-  { label: '📋 Ô 3', value: 'Ô 3' },
-  { label: '📋 Ô 4', value: 'Ô 4' },
-  { label: '📋 Ô 5', value: 'Ô 5' },
-  { label: '📋 Ô 6', value: 'Ô 6' },
-  { label: '📋 Ô 7', value: 'Ô 7' },
-  { label: '📋 Ô 8', value: 'Ô 8' },
-]
+const scenarioOptions = computed(() => {
+  if (autoType.value === 'Cường hóa' || autoType.value === 'Tẩy thuộc tính') {
+    return [
+      { label: '🟥 Ô 1', value: 'Ô 1' },
+      { label: '🟧 Ô 2', value: 'Ô 2' },
+      { label: '🟨 Ô 3', value: 'Ô 3' },
+      { label: '🟩 Ô 4', value: 'Ô 4' },
+      { label: '🟦 Ô 5', value: 'Ô 5' },
+      { label: '🟪 Ô 6', value: 'Ô 6' },
+      { label: '⬛ Ô 7', value: 'Ô 7' },
+      { label: '⬜ Ô 8', value: 'Ô 8' },
+    ]
+  }
+
+  if (autoType.value === 'Trang bị') {
+    return [
+      { label: '🛡️ Giáp', value: 'Giáp' },
+      { label: '🧤 Găng', value: 'Găng' },
+      { label: '🥾 Giày', value: 'Giày' },
+      { label: '📿 Dây chuyền', value: 'Dây chuyền' },
+      { label: '💍 Nhẫn', value: 'Nhẫn' },
+      { label: '⚔️ Vũ khí', value: 'Vũ khí' },
+    ]
+  }
+
+  return []
+})
+
+watch(autoType, () => {
+  scenario.value = scenarioOptions.value[0]?.value || ''
+})
 
 // Computed
 const statusTitle = computed(() => isRunning.value ? 'Đang hoạt động' : 'Đã dừng')
@@ -333,6 +378,13 @@ const statusMessage = computed(() => {
 
 const sortedFiles = computed(() => {
   return [...files.value].sort((a, b) => b.modified - a.modified)
+})
+
+const logLines = computed(() => {
+  if (!logContent.value || logContent.value.includes('Chọn file') || logContent.value.includes('Lỗi:')) {
+    return []
+  }
+  return logContent.value.split('\n')
 })
 
 // Methods
@@ -346,11 +398,11 @@ const formatDate = (timestamp) => {
   const date = new Date(timestamp)
   const now = new Date()
   const diff = now - date
-  
+
   if (diff < 60000) return 'Vừa xong'
   if (diff < 3600000) return Math.floor(diff / 60000) + ' phút trước'
   if (diff < 86400000) return Math.floor(diff / 3600000) + ' giờ trước'
-  
+
   return date.toLocaleString('vi-VN', {
     day: '2-digit',
     month: '2-digit',
@@ -383,7 +435,7 @@ const checkStatus = async () => {
   try {
     loading.value = true
     const result = await autoService.checkStatus()
-    
+
     if (result.success) {
       isRunning.value = result.data.running
       lastUpdate.value = result.data.timestamp
@@ -417,7 +469,7 @@ const handleStart = async () => {
   try {
     startLoading.value = true
     const result = await autoService.startAuto(autoType.value, scenario.value, searchB.value)
-    
+
     if (result.success) {
       message.success(result.message)
       await checkStatus()
@@ -437,7 +489,7 @@ const handleStop = async () => {
   try {
     stopLoading.value = true
     const result = await autoService.stopAuto()
-    
+
     if (result.success) {
       message.success(result.message)
       await checkStatus()
@@ -455,7 +507,7 @@ const handleLoadFiles = async () => {
   try {
     filesLoading.value = true
     const result = await autoService.getFiles()
-    
+
     if (result.success) {
       files.value = result.files || []
       message.success(`Đã tải ${files.value.length} file`)
@@ -475,7 +527,7 @@ const handleViewFile = async (filename) => {
   try {
     logLoading.value = true
     const result = await autoService.viewFile(filename)
-    
+
     if (result.success) {
       logContent.value = result.content || '(File trống)'
       message.success(`Đã tải file: ${filename}`)
@@ -500,7 +552,7 @@ const handleDeleteFile = (filename) => {
     onPositiveClick: async () => {
       try {
         const result = await autoService.deleteFile(filename)
-        
+
         if (result.success) {
           message.success(result.message)
           await handleLoadFiles()
@@ -525,10 +577,10 @@ onMounted(() => {
   autoService.setBaseUrl(domainServer.value)
   checkStatus()
   handleLoadFiles()
-  
+
   // Auto refresh every 5 seconds
   statusInterval = setInterval(checkStatus, 5000)
-  
+
   window.addEventListener('resize', handleResize)
 })
 
@@ -736,22 +788,55 @@ onUnmounted(() => {
   top: 20px;
 }
 
-.log-container {
-  background: #1f2937;
-  border-radius: 12px;
-  padding: 16px;
-  max-height: 500px;
-  overflow-y: auto;
-}
-
 .log-content {
   color: #10b981;
-  font-family: 'Courier New', monospace;
+  //font-family: 'Courier New', monospace;
+  font-family: 'Comic Neue', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13px;
   line-height: 1.6;
   margin: 0;
   white-space: pre-wrap;
   word-wrap: break-word;
+  text-align: left;
+}
+
+.log-container {
+  background: #1f2937;
+  border-radius: 12px;
+  padding: 0;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.log-lines {
+  padding: 8px 0;
+}
+
+.log-line-item {
+  padding: 6px 16px;
+  color: #10b981;
+  //font-family: 'Bangers', cursive;
+  font-family: 'VNF-ComicSans', cursive, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  border-bottom: 1px solid #374151; /* Đường viền phân cách rõ ràng */
+  text-align: left;
+}
+
+.log-line-item:last-child {
+  border-bottom: none; /* Không có viền ở dòng cuối */
+}
+
+/* Optional: Xen kẽ màu nền nhẹ để dễ nhìn hơn */
+.log-line-even {
+  background: rgba(55, 65, 81, 0.3);
+}
+
+.log-empty {
+  color: #10b981;
+  text-align: center;
+  padding: 20px 20px;
+  //font-style: italic;
 }
 
 /* File Grid */
