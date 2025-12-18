@@ -280,15 +280,29 @@
             <template #header>
               <div class="card-header">
                 <span>📁 Quản lý File</span>
-                <n-button
+                <n-space :size="8">
+                  <!-- NÚT TẠO FILE MỚI -->
+                  <n-button
+                    @click="showCreateDialog = true"
+                    type="primary"
+                    tertiary
+                  >
+                    <template #icon>
+                      <span style="font-size: 18px;">➕</span>
+                    </template>
+                    <span v-if="!isMobile">Tạo file</span>
+                  </n-button>
+
+                  <n-button
                     @click="handleLoadFiles"
                     :loading="filesLoading"
                     tertiary
-                >
-                  <template #icon>
-                    <span style="font-size: 18px;">🔄</span>
-                  </template>
-                </n-button>
+                  >
+                    <template #icon>
+                      <span style="font-size: 18px;">🔄</span>
+                    </template>
+                  </n-button>
+                </n-space>
               </div>
             </template>
 
@@ -365,6 +379,54 @@
         </n-gi>
       </n-grid>
     </div>
+    <n-modal
+      v-model:show="showCreateDialog"
+      preset="dialog"
+      title="📝 Tạo file mới"
+      :positive-text="createLoading ? 'Đang tạo...' : 'Tạo file'"
+      negative-text="Hủy"
+      :loading="createLoading"
+      @positive-click="handleCreateFile"
+      @negative-click="handleCancelCreate"
+    >
+      <n-form
+        :model="createForm"
+        label-placement="top"
+        style="margin-top: 16px;"
+      >
+        <n-form-item label="Tên file">
+          <n-input
+            v-model:value="createForm.filename"
+            placeholder="vd: my-file"
+            @keyup.enter="handleCreateFile"
+            clearable
+          />
+          <n-select
+            v-model:value="createForm.extension"
+            :options="extensionOptions"
+            style="width: 100px; margin-left: 5px;"
+          />
+        </n-form-item>
+
+        <n-form-item label="Nội dung ban đầu (tùy chọn)">
+          <n-input
+            v-model:value="createForm.content"
+            type="textarea"
+            :rows="5"
+            placeholder="Để trống nếu muốn tạo file rỗng..."
+            show-count
+          />
+        </n-form-item>
+
+        <n-alert
+          type="info"
+          title="💡 Gợi ý"
+          style="margin-top: 8px;"
+        >
+          File sẽ được lưu trong thư mục /storage/emulated/0/AutoEHT/
+        </n-alert>
+      </n-form>
+    </n-modal>
   </div>
 </template>
 
@@ -372,7 +434,7 @@
 import {ref, computed, onMounted, onUnmounted, watch} from 'vue'
 import {
   NCard, NSpace, NButton, NFormItem, NInput, NForm,
-  NSelect, NSpin, NEmpty, NGrid, NGi, NSwitch,
+  NSelect, NSpin, NEmpty, NGrid, NGi, NSwitch, NModal,
   useMessage, useDialog
 } from 'naive-ui'
 import autoService from '../api/autoService'
@@ -397,6 +459,19 @@ const searchB = ref(false)
 const files = ref([])
 const logContent = ref('Chọn file để xem nội dung...')
 const currentFilename = ref('')
+const showCreateDialog = ref(false)
+const createLoading = ref(false)
+const createForm = ref({
+  filename: '',
+  extension: '.txt',
+  content: ''
+})
+
+const extensionOptions = [
+  { label: '.txt', value: '.txt' },
+  { label: '.log', value: '.log' },
+  { label: '.json', value: '.json' }
+]
 
 // Edit mode
 const isEditMode = ref(false)
@@ -756,6 +831,74 @@ const handleDeleteFile = (filename) => {
   })
 }
 
+const handleCreateFile = async () => {
+  // Validate
+  if (!createForm.value.filename.trim()) {
+    message.warning('Vui lòng nhập tên file')
+    return false
+  }
+
+  const filename = createForm.value.filename.trim() + createForm.value.extension
+
+  // Kiểm tra tên file hợp lệ
+  if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    message.error('Tên file không được chứa ký tự đặc biệt')
+    return false
+  }
+
+  // Kiểm tra file đã tồn tại
+  if (files.value.some(f => f.name === filename)) {
+    message.warning('File này đã tồn tại')
+    return false
+  }
+
+  try {
+    createLoading.value = true
+    const result = await autoService.createFile(filename, createForm.value.content)
+
+    if (result.success) {
+      message.success(result.message || `Đã tạo file: ${filename}`)
+
+      // Reset form
+      createForm.value = {
+        filename: '',
+        extension: '.txt',
+        content: ''
+      }
+
+      // Reload file list
+      await handleLoadFiles()
+
+      // Đóng dialog
+      showCreateDialog.value = false
+
+      // Tự động mở file vừa tạo
+      setTimeout(() => {
+        handleViewFile(filename)
+      }, 300)
+
+      return true
+    } else {
+      message.error(result.error || 'Không thể tạo file')
+      return false
+    }
+  } catch (error) {
+    message.error('Lỗi: ' + error.message)
+    return false
+  } finally {
+    createLoading.value = false
+  }
+}
+
+const handleCancelCreate = () => {
+  createForm.value = {
+    filename: '',
+    extension: '.txt',
+    content: ''
+  }
+  showCreateDialog.value = false
+}
+
 // Auto refresh status
 let statusInterval = null
 
@@ -944,6 +1087,30 @@ onUnmounted(() => {
 
 .glass-card :deep(.n-card__content) {
   padding: 24px;
+}
+
+/* Modal Dialog Styles */
+:deep(.n-dialog) {
+  max-width: 520px;
+}
+
+:deep(.n-dialog__title) {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+:deep(.n-form-item-label) {
+  font-weight: 500;
+  color: #374151;
+}
+
+:deep(.n-input__suffix) {
+  padding: 0;
+}
+
+:deep(.n-alert) {
+  border-radius: 8px;
 }
 
 /* Action Buttons */

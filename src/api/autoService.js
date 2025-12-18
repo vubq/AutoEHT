@@ -108,6 +108,23 @@ class AutoService {
       return { success: false, error: errMsg }
     }
   }
+
+  async createFile(filename, content = '') {
+    try {
+      const response = await http.post(
+        `${this.baseUrl}/files/create`,
+        { filename, content }
+      )
+      return {
+        success: true,
+        message: response.data.message || 'Tạo file thành công',
+        data: response.data
+      }
+    } catch (error) {
+      const errMsg = error.response?.data?.error || error.message || 'Lỗi tạo file'
+      return { success: false, error: errMsg }
+    }
+  }
 }
 
 export default new AutoService()
