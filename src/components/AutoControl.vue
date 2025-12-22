@@ -30,414 +30,100 @@
         <!-- Left Column: Status & Controls -->
         <n-gi :span="isMobile ? 1 : 16">
           <n-space vertical :size="16">
-            <!-- Status Card with Animation -->
-            <div class="status-card" :class="{ 'status-running': isRunning, 'status-stopped': !isRunning }">
-              <div class="status-icon">
-                {{ isRunning ? '✅' : '⛔' }}
-              </div>
-              <div class="status-info">
-                <div class="status-title">{{ statusTitle }}</div>
-                <div class="status-message">{{ statusMessage }}</div>
-                <div v-if="lastUpdate" class="status-time">
-                  Cập nhật: {{ formatTime(lastUpdate) }}
-                </div>
-              </div>
-              <div class="status-indicator" :class="{ 'indicator-active': isRunning }"></div>
-            </div>
+            <!-- Status Card -->
+            <StatusCard
+                :is-running="isRunning"
+                :loading="loading"
+                :last-update="lastUpdate"
+            />
 
-            <!-- Control Card -->
-            <n-card title="⚙️ Điều khiển" class="glass-card" :bordered="false">
-              <n-form :label-placement="isMobile ? 'top' : 'left'" label-width="140" :label-align="isMobile ? 'left' : 'left'">
-                <n-form-item label="🌐 Domain">
-                  <n-input
-                      v-model:value="domainServer"
-                      placeholder="vubq.serveousercontent.com"
-                      @update:value="handleDomainChange"
-                      size="large"
-                      :disabled="isRunning"
-                      style="text-align: left;"
-                  >
-                    <template #prefix>
-                      <span style="opacity: 0.6;">https://</span>
-                    </template>
-                  </n-input>
-                </n-form-item>
+            <!-- Control Form -->
+            <ControlForm
+                v-model:domain-server="domainServer"
+                v-model:auto-type="autoType"
+                v-model:scenario="scenario"
+                v-model:search-b="searchB"
+                :is-running="isRunning"
+                :start-loading="startLoading"
+                :stop-loading="stopLoading"
+                :is-mobile="isMobile"
+                @domain-change="handleDomainChange"
+                @start="handleStart"
+                @stop="handleStop"
+            />
 
-                <n-form-item label="🎯 Loại Auto">
-                  <n-select
-                      v-model:value="autoType"
-                      :options="autoTypeOptions"
-                      size="large"
-                      :disabled="isRunning"
-                      style="text-align: left;"
-                  />
-                </n-form-item>
-
-                <n-form-item label="📋 Kịch bản" v-if="autoType === 'Trang bị' || autoType === 'Cường hóa' || autoType === 'Tẩy thuộc tính'">
-                  <n-select
-                      v-model:value="scenario"
-                      :options="scenarioOptions"
-                      size="large"
-                      :disabled="isRunning"
-                      style="text-align: left;"
-                  />
-                </n-form-item>
-
-                <n-form-item label="🔍 Thiết lập B" v-if="autoType === 'Trang bị'">
-                  <n-switch
-                      v-model:value="searchB"
-                      :disabled="isRunning"
-                  >
-                    <template #checked>
-                      Bật
-                    </template>
-                    <template #unchecked>
-                      Tắt
-                    </template>
-                  </n-switch>
-                </n-form-item>
-
-                <n-space :vertical="isMobile" :size="12" style="width: 100%; margin-top: 8px;">
-                  <n-button
-                      type="success"
-                      @click="handleStart"
-                      :loading="startLoading"
-                      :disabled="isRunning"
-                      size="large"
-                      :block="isMobile"
-                      class="action-btn start-btn"
-                  >
-                    <template #icon>
-                      <span style="font-size: 16px;">▶️</span>
-                    </template>
-                    Khởi động Auto
-                  </n-button>
-                  <n-button
-                      type="error"
-                      @click="handleStop"
-                      :loading="stopLoading"
-                      :disabled="!isRunning"
-                      size="large"
-                      :block="isMobile"
-                      class="action-btn stop-btn"
-                  >
-                    <template #icon>
-                      <span style="font-size: 16px;">⏹️</span>
-                    </template>
-                    Dừng Auto
-                  </n-button>
-                </n-space>
-              </n-form>
-            </n-card>
-
-            <!-- Log Viewer (Mobile only here) -->
-            <n-card v-if="isMobile" class="glass-card" :bordered="false">
-              <template #header>
-                <div class="card-header">
-                  <span>📋 Log</span>
-                  <n-space :size="8">
-                    <n-button
-                        v-if="isEditMode"
-                        @click="handleSaveEdit"
-                        :loading="saveLoading"
-                        size="small"
-                        tertiary
-                    >
-                      <template #icon>
-                        <span>💾</span>
-                      </template>
-                    </n-button>
-                    <n-button
-                        v-if="currentFilename"
-                        @click="toggleEditMode"
-                        :type="isEditMode ? 'warning' : 'info'"
-                        size="small"
-                        tertiary
-                    >
-                      <template #icon>
-                        <span>{{ isEditMode ? '❌' : '✏️' }}</span>
-                      </template>
-                    </n-button>
-                    <n-button
-                        @click="handleClearLog"
-                        tertiary
-                        :loading="logLoading"
-                        size="small"
-                    >
-                      <template #icon>
-                        <span>🗑️</span>
-                      </template>
-                    </n-button>
-                  </n-space>
-                </div>
-              </template>
-              <n-spin :show="logLoading">
-                <div class="log-container">
-                  <n-input
-                      v-if="isEditMode"
-                      v-model:value="editContent"
-                      type="textarea"
-                      :rows="15"
-                      class="edit-textarea"
-                      style="border: none !important; text-align: left;"
-                  />
-                  <div v-else class="log-lines">
-                    <div
-                        v-for="(line, index) in logLines"
-                        :key="index"
-                        class="log-line-item"
-                        :class="{ 'log-line-even': index % 2 === 1 }"
-                    >
-                      {{ line || '&nbsp;' }}
-                    </div>
-                    <div v-if="!logLines.length" class="log-empty">
-                      {{ logContent }}
-                    </div>
-                  </div>
-                </div>
-              </n-spin>
-            </n-card>
+            <!-- Log Viewer (Mobile only) -->
+            <LogViewer
+                v-if="isMobile"
+                :content="logContent"
+                :current-filename="currentFilename"
+                :loading="logLoading"
+                :save-loading="saveLoading"
+                v-model:edit-content="editContent"
+                v-model:is-edit-mode="isEditMode"
+                :rows="15"
+                @toggle-edit="toggleEditMode"
+                @save="handleSaveEdit"
+                @clear="handleClearLog"
+            />
           </n-space>
         </n-gi>
 
-        <!-- Right Column: Files & Logs (Desktop only) -->
+        <!-- Right Column: Log Viewer (Desktop only) -->
         <n-gi v-if="!isMobile" :span="8">
-          <n-space vertical :size="16">
-            <!-- Log Viewer -->
-            <n-card class="glass-card log-card" :bordered="false">
-              <template #header>
-                <div class="card-header">
-                  <span>📋 Log Viewer</span>
-                  <n-space :size="8">
-                    <n-button
-                        v-if="isEditMode"
-                        @click="handleSaveEdit"
-                        type="success"
-                        :loading="saveLoading"
-                        size="small"
-                        tertiary
-                    >
-                      <template #icon>
-                        <span>💾</span>
-                      </template>
-                    </n-button>
-                    <n-button
-                        v-if="currentFilename"
-                        @click="toggleEditMode"
-                        :type="isEditMode ? 'warning' : 'info'"
-                        size="small"
-                        tertiary
-                    >
-                      <template #icon>
-                        <span>{{ isEditMode ? '❌' : '✏️' }}</span>
-                      </template>
-                    </n-button>
-                    <n-button
-                        @click="handleClearLog"
-                        :loading="logLoading"
-                        tertiary
-                        size="small"
-                    >
-                      <template #icon>
-                        <span>🗑️</span>
-                      </template>
-                    </n-button>
-                  </n-space>
-                </div>
-              </template>
-              <n-spin :show="logLoading">
-                <div class="log-container">
-                  <n-input
-                      v-if="isEditMode"
-                      v-model:value="editContent"
-                      type="textarea"
-                      :rows="20"
-                      class="edit-textarea"
-                      style="border: none !important; text-align: left;"
-                  />
-                  <div v-else class="log-lines">
-                    <div
-                        v-for="(line, index) in logLines"
-                        :key="index"
-                        class="log-line-item"
-                        :class="{ 'log-line-even': index % 2 === 1 }"
-                    >
-                      {{ line || '&nbsp;' }}
-                    </div>
-                    <div v-if="!logLines.length" class="log-empty">
-                      {{ logContent }}
-                    </div>
-                  </div>
-                </div>
-              </n-spin>
-            </n-card>
-          </n-space>
+          <LogViewer
+              :content="logContent"
+              :current-filename="currentFilename"
+              :loading="logLoading"
+              :save-loading="saveLoading"
+              v-model:edit-content="editContent"
+              v-model:is-edit-mode="isEditMode"
+              :rows="20"
+              @toggle-edit="toggleEditMode"
+              @save="handleSaveEdit"
+              @clear="handleClearLog"
+          />
         </n-gi>
 
         <!-- File Manager (Full width) -->
         <n-gi :span="isMobile ? 1 : 24">
-          <n-card class="glass-card file-card" :bordered="false">
-            <template #header>
-              <div class="card-header">
-                <span>📁 Quản lý File</span>
-                <n-space :size="8">
-                  <!-- NÚT TẠO FILE MỚI -->
-                  <n-button
-                    @click="showCreateDialog = true"
-                    type="primary"
-                    tertiary
-                  >
-                    <template #icon>
-                      <span style="font-size: 18px;">➕</span>
-                    </template>
-                    <span v-if="!isMobile">Tạo file</span>
-                  </n-button>
-
-                  <n-button
-                    @click="handleLoadFiles"
-                    :loading="filesLoading"
-                    tertiary
-                  >
-                    <template #icon>
-                      <span style="font-size: 18px;">🔄</span>
-                    </template>
-                  </n-button>
-                </n-space>
-              </div>
-            </template>
-
-            <n-spin :show="filesLoading">
-              <div v-if="files.length > 0" class="file-grid">
-                <div
-                    v-for="file in sortedFiles"
-                    :key="file.name"
-                    class="file-card-item"
-                    :class="{ 'file-active': currentFilename === file.name }"
-                    @click="handleViewFile(file.name)"
-                >
-                  <div class="file-icon">{{ getFileIcon(file.name) }}</div>
-                  <div class="file-info">
-                    <div class="file-name" :title="file.name">{{ file.name }}</div>
-                    <div class="file-meta">
-                      <span class="file-size">{{ formatFileSize(file.size) }}</span>
-                      <span class="file-date">{{ formatDate(file.modified) }}</span>
-                    </div>
-                  </div>
-                  <div class="file-actions" @click.stop>
-                    <n-button
-                        text
-                        type="primary"
-                        @click="handleViewFile(file.name)"
-                        class="action-icon-btn"
-                        size="tiny"
-                    >
-                      <template #icon>
-                        <span style="font-size: 13px;">👀</span>
-                      </template>
-                    </n-button>
-                    <n-button
-                        text
-                        type="info"
-                        @click="handleEditFile(file.name)"
-                        class="action-icon-btn"
-                        size="tiny"
-                    >
-                      <template #icon>
-                        <span style="font-size: 13px;">✏️</span>
-                      </template>
-                    </n-button>
-                    <n-button
-                        text
-                        type="error"
-                        @click="handleDeleteFile(file.name)"
-                        class="action-icon-btn"
-                        size="tiny"
-                    >
-                      <template #icon>
-                        <span style="font-size: 13px;">🗑️</span>
-                      </template>
-                    </n-button>
-                  </div>
-                </div>
-              </div>
-              <n-empty
-                  v-else
-                  description="Chưa có file nào"
-                  class="empty-state"
-              >
-                <template #icon>
-                  <span style="font-size: 48px;">📂</span>
-                </template>
-                <template #extra>
-                  <n-button @click="handleLoadFiles" type="primary" size="small">
-                    Tải lại
-                  </n-button>
-                </template>
-              </n-empty>
-            </n-spin>
-          </n-card>
+          <FileManager
+              :files="files"
+              :current-filename="currentFilename"
+              :loading="filesLoading"
+              :is-mobile="isMobile"
+              @view="handleViewFile"
+              @edit="handleEditFile"
+              @delete="handleDeleteFile"
+              @create="showCreateDialog = true"
+              @refresh="handleLoadFiles"
+          />
         </n-gi>
       </n-grid>
     </div>
-    <n-modal
-      v-model:show="showCreateDialog"
-      preset="dialog"
-      title="📝 Tạo file mới"
-      :positive-text="createLoading ? 'Đang tạo...' : 'Tạo file'"
-      negative-text="Hủy"
-      :loading="createLoading"
-      @positive-click="handleCreateFile"
-      @negative-click="handleCancelCreate"
-    >
-      <n-form
-        :model="createForm"
-        label-placement="top"
-        style="margin-top: 16px;"
-      >
-        <n-form-item label="Tên file">
-          <n-input
-            v-model:value="createForm.filename"
-            placeholder="vd: my-file"
-            @keyup.enter="handleCreateFile"
-            clearable
-          />
-          <n-select
-            v-model:value="createForm.extension"
-            :options="extensionOptions"
-            style="width: 100px; margin-left: 5px;"
-          />
-        </n-form-item>
 
-        <n-form-item label="Nội dung ban đầu (tùy chọn)">
-          <n-input
-            v-model:value="createForm.content"
-            type="textarea"
-            :rows="5"
-            placeholder="Để trống nếu muốn tạo file rỗng..."
-            show-count
-          />
-        </n-form-item>
-
-        <n-alert
-          type="info"
-          title="💡 Gợi ý"
-          style="margin-top: 8px;"
-        >
-          File sẽ được lưu trong thư mục /storage/emulated/0/AutoEHT/
-        </n-alert>
-      </n-form>
-    </n-modal>
+    <!-- Create File Modal -->
+    <CreateFileModal
+        v-model:show="showCreateDialog"
+        v-model:form="createForm"
+        :loading="createLoading"
+        @create="handleCreateFile"
+        @cancel="handleCancelCreate"
+    />
   </div>
 </template>
 
 <script setup>
-import {ref, computed, onMounted, onUnmounted, watch} from 'vue'
-import {
-  NCard, NSpace, NButton, NFormItem, NInput, NForm,
-  NSelect, NSpin, NEmpty, NGrid, NGi, NSwitch, NModal,
-  useMessage, useDialog
-} from 'naive-ui'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { NGrid, NGi, NSpace, NButton, useMessage, useDialog } from 'naive-ui'
 import autoService from '../api/autoService'
+
+// Import components
+import StatusCard from './StatusCard.vue'
+import ControlForm from './ControlForm.vue'
+import LogViewer from './LogViewer.vue'
+import FileManager from './FileManager.vue'
+import CreateFileModal from './CreateFileModal.vue'
 
 const message = useMessage()
 const dialog = useDialog()
@@ -449,6 +135,7 @@ const stopLoading = ref(false)
 const filesLoading = ref(false)
 const logLoading = ref(false)
 const saveLoading = ref(false)
+const createLoading = ref(false)
 
 const isRunning = ref(false)
 const lastUpdate = ref(null)
@@ -460,18 +147,12 @@ const files = ref([])
 const logContent = ref('Chọn file để xem nội dung...')
 const currentFilename = ref('')
 const showCreateDialog = ref(false)
-const createLoading = ref(false)
+
 const createForm = ref({
   filename: '',
   extension: '.txt',
   content: ''
 })
-
-const extensionOptions = [
-  { label: '.txt', value: '.txt' },
-  { label: '.log', value: '.log' },
-  { label: '.json', value: '.json' }
-]
 
 // Edit mode
 const isEditMode = ref(false)
@@ -485,202 +166,7 @@ const handleResize = () => {
   isMobile.value = window.innerWidth <= 768
 }
 
-// Auto type options
-const autoTypeOptions = [
-  { label: '🛡️ Trang bị', value: 'Trang bị' },
-  { label: '⚔️ Cường hóa', value: 'Cường hóa' },
-  { label: '🧬 Tẩy thuộc tính', value: 'Tẩy thuộc tính' },
-  { label: '🎁 Thú cưỡi', value: 'Thú cưỡi' },
-  { label: '📦 Rương boss', value: 'Rương boss' },
-  { label: '🎭 Tính cách', value: 'Tính cách' },
-  { label: '📦 Rương trang bị thú', value: 'Rương trang bị thú' },
-  { label: '💖 Đai lưng', value: 'Đai lưng' },
-  { label: '👑 Đai lưng MAX', value: 'Đai lưng MAX' },
-  { label: '🏰 Hầm ngục', value: 'Hầm ngục' },
-  { label: '💾 Backup', value: 'Backup' },
-  { label: '♻️ Restore', value: 'Restore' },
-  { label: '📜 Script', value: 'Script' },
-  { label: '🧪 Test', value: 'Test' },
-]
-
-const scenarioOptions = computed(() => {
-  if (autoType.value === 'Cường hóa' || autoType.value === 'Tẩy thuộc tính') {
-    return [
-      { label: '🟥 Ô 1', value: 'Ô 1' },
-      { label: '🟧 Ô 2', value: 'Ô 2' },
-      { label: '🟨 Ô 3', value: 'Ô 3' },
-      { label: '🟩 Ô 4', value: 'Ô 4' },
-      { label: '🟦 Ô 5', value: 'Ô 5' },
-      { label: '🟪 Ô 6', value: 'Ô 6' },
-      { label: '⬛ Ô 7', value: 'Ô 7' },
-      { label: '⬜ Ô 8', value: 'Ô 8' },
-    ]
-  }
-
-  if (autoType.value === 'Trang bị') {
-    return [
-      { label: '🛡️ Giáp', value: 'Giáp' },
-      { label: '🧤 Găng', value: 'Găng' },
-      { label: '🥾 Giày', value: 'Giày' },
-      { label: '📿 Dây chuyền', value: 'Dây chuyền' },
-      { label: '💍 Nhẫn', value: 'Nhẫn' },
-      { label: '⚔️ Vũ khí', value: 'Vũ khí' },
-    ]
-  }
-
-  return []
-})
-
-watch(autoType, () => {
-  scenario.value = scenarioOptions.value[0]?.value || ''
-})
-
-// Computed
-const statusTitle = computed(() => isRunning.value ? 'Đang hoạt động' : 'Đã dừng')
-const statusMessage = computed(() => {
-  if (loading.value) return 'Đang kiểm tra trạng thái...'
-  return isRunning.value ? 'Auto đang chạy bình thường' : 'Nhấn khởi động để bắt đầu'
-})
-
-const sortedFiles = computed(() => {
-  return [...files.value].sort((a, b) => b.modified - a.modified)
-})
-
-const logLines = computed(() => {
-  if (!logContent.value || logContent.value.includes('Chọn file') || logContent.value.includes('Lỗi:')) {
-    return []
-  }
-  const lines = logContent.value
-      .split('\n')
-      .filter(line => line.trim() !== '')
-  return lines.reverse()
-})
-
-// Edit mode methods
-const toggleEditMode = () => {
-  if (!currentFilename.value) {
-    message.warning('Chưa chọn file nào để chỉnh sửa')
-    return
-  }
-
-  if (isEditMode.value) {
-    // Cancel edit
-    dialog.warning({
-      title: '❌ Hủy chỉnh sửa',
-      content: 'Bạn có chắc muốn hủy các thay đổi?',
-      positiveText: 'Hủy thay đổi',
-      negativeText: 'Tiếp tục sửa',
-      onPositiveClick: () => {
-        isEditMode.value = false
-        editContent.value = ''
-      }
-    })
-  } else {
-    // Enter edit mode
-    isEditMode.value = true
-    // Convert log lines back to original format
-    editContent.value = originalContent.value
-    message.info('Đã vào chế độ chỉnh sửa')
-  }
-}
-
-const handleSaveEdit = async () => {
-  if (!currentFilename.value) {
-    message.warning('Không có file để lưu')
-    return
-  }
-
-  if (editContent.value === originalContent.value) {
-    message.info('Không có thay đổi nào')
-    return
-  }
-
-  dialog.info({
-    title: '💾 Xác nhận lưu',
-    content: `Bạn có chắc muốn lưu thay đổi vào file "${currentFilename.value}"?`,
-    positiveText: 'Lưu',
-    negativeText: 'Hủy',
-    onPositiveClick: async () => {
-      try {
-        saveLoading.value = true
-        const result = await autoService.updateFile(currentFilename.value, editContent.value)
-
-        if (result.success) {
-          message.success(result.message)
-          isEditMode.value = false
-          logContent.value = editContent.value
-          originalContent.value = editContent.value
-          // Reload file list to update size and modified time
-          await handleLoadFiles()
-        } else {
-          message.error(result.error || 'Không thể lưu file')
-        }
-      } catch (error) {
-        message.error('Lỗi: ' + error.message)
-      } finally {
-        saveLoading.value = false
-      }
-    }
-  })
-}
-
-const handleClearLog = () => {
-  logContent.value = 'Chọn file để xem nội dung...'
-  currentFilename.value = ''
-  isEditMode.value = false
-  editContent.value = ''
-  originalContent.value = ''
-  message.info('Đã xóa log')
-}
-
-const handleEditFile = async (filename) => {
-  await handleViewFile(filename)
-  setTimeout(() => {
-    if (!isEditMode.value) {
-      toggleEditMode()
-    }
-  }, 100)
-}
-
 // Methods
-const formatFileSize = (bytes) => {
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
-}
-
-const formatDate = (timestamp) => {
-  const date = new Date(timestamp)
-  const now = new Date()
-  const diff = now - date
-
-  if (diff < 60000) return 'Vừa xong'
-  if (diff < 3600000) return Math.floor(diff / 60000) + ' phút trước'
-  if (diff < 86400000) return Math.floor(diff / 3600000) + ' giờ trước'
-
-  return date.toLocaleString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-const formatTime = (timestamp) => {
-  return new Date(timestamp).toLocaleTimeString('vi-VN')
-}
-
-const getFileIcon = (filename) => {
-  const ext = filename.split('.').pop().toLowerCase()
-  const icons = {
-    'log': '📄',
-    'txt': '📝',
-    'json': '📊'
-  }
-  return icons[ext] || '📄'
-}
-
 const handleDomainChange = (value) => {
   autoService.setBaseUrl(value)
   message.info('Đã cập nhật domain server')
@@ -777,7 +263,6 @@ const handleLoadFiles = async () => {
 }
 
 const handleViewFile = async (filename) => {
-  // Exit edit mode if viewing different file
   if (isEditMode.value && currentFilename.value !== filename) {
     isEditMode.value = false
   }
@@ -803,6 +288,87 @@ const handleViewFile = async (filename) => {
   } finally {
     logLoading.value = false
   }
+}
+
+const handleEditFile = async (filename) => {
+  await handleViewFile(filename)
+  setTimeout(() => {
+    if (!isEditMode.value) {
+      toggleEditMode()
+    }
+  }, 100)
+}
+
+const toggleEditMode = () => {
+  if (!currentFilename.value) {
+    message.warning('Chưa chọn file nào để chỉnh sửa')
+    return
+  }
+
+  if (isEditMode.value) {
+    dialog.warning({
+      title: '❌ Hủy chỉnh sửa',
+      content: 'Bạn có chắc muốn hủy các thay đổi?',
+      positiveText: 'Hủy thay đổi',
+      negativeText: 'Tiếp tục sửa',
+      onPositiveClick: () => {
+        isEditMode.value = false
+        editContent.value = ''
+      }
+    })
+  } else {
+    isEditMode.value = true
+    editContent.value = originalContent.value
+    message.info('Đã vào chế độ chỉnh sửa')
+  }
+}
+
+const handleSaveEdit = async () => {
+  if (!currentFilename.value) {
+    message.warning('Không có file để lưu')
+    return
+  }
+
+  if (editContent.value === originalContent.value) {
+    message.info('Không có thay đổi nào')
+    return
+  }
+
+  dialog.info({
+    title: '💾 Xác nhận lưu',
+    content: `Bạn có chắc muốn lưu thay đổi vào file "${currentFilename.value}"?`,
+    positiveText: 'Lưu',
+    negativeText: 'Hủy',
+    onPositiveClick: async () => {
+      try {
+        saveLoading.value = true
+        const result = await autoService.updateFile(currentFilename.value, editContent.value)
+
+        if (result.success) {
+          message.success(result.message)
+          isEditMode.value = false
+          logContent.value = editContent.value
+          originalContent.value = editContent.value
+          await handleLoadFiles()
+        } else {
+          message.error(result.error || 'Không thể lưu file')
+        }
+      } catch (error) {
+        message.error('Lỗi: ' + error.message)
+      } finally {
+        saveLoading.value = false
+      }
+    }
+  })
+}
+
+const handleClearLog = () => {
+  logContent.value = 'Chọn file để xem nội dung...'
+  currentFilename.value = ''
+  isEditMode.value = false
+  editContent.value = ''
+  originalContent.value = ''
+  message.info('Đã xóa log')
 }
 
 const handleDeleteFile = (filename) => {
@@ -831,22 +397,19 @@ const handleDeleteFile = (filename) => {
   })
 }
 
-const handleCreateFile = async () => {
-  // Validate
-  if (!createForm.value.filename.trim()) {
+const handleCreateFile = async (form) => {
+  if (!form.filename.trim()) {
     message.warning('Vui lòng nhập tên file')
     return false
   }
 
-  const filename = createForm.value.filename.trim() + createForm.value.extension
+  const filename = form.filename.trim() + form.extension
 
-  // Kiểm tra tên file hợp lệ
   if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
     message.error('Tên file không được chứa ký tự đặc biệt')
     return false
   }
 
-  // Kiểm tra file đã tồn tại
   if (files.value.some(f => f.name === filename)) {
     message.warning('File này đã tồn tại')
     return false
@@ -854,25 +417,20 @@ const handleCreateFile = async () => {
 
   try {
     createLoading.value = true
-    const result = await autoService.createFile(filename, createForm.value.content)
+    const result = await autoService.createFile(filename, form.content)
 
     if (result.success) {
       message.success(result.message || `Đã tạo file: ${filename}`)
 
-      // Reset form
       createForm.value = {
         filename: '',
         extension: '.txt',
         content: ''
       }
 
-      // Reload file list
       await handleLoadFiles()
-
-      // Đóng dialog
       showCreateDialog.value = false
 
-      // Tự động mở file vừa tạo
       setTimeout(() => {
         handleViewFile(filename)
       }, 300)
@@ -925,7 +483,6 @@ onUnmounted(() => {
   padding-bottom: 40px;
 }
 
-/* Header Section */
 .header-section {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
@@ -977,387 +534,12 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Content Wrapper */
 .content-wrapper {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 20px;
 }
 
-/* Status Card */
-.status-card {
-  background: white;
-  border-radius: 16px;
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.status-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #ef4444, #dc2626);
-  transition: all 0.3s ease;
-}
-
-.status-card.status-running::before {
-  background: linear-gradient(90deg, #10b981, #059669);
-}
-
-.status-icon {
-  font-size: 48px;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-}
-
-.status-info {
-  flex: 1;
-}
-
-.status-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1f2937;
-  margin-bottom: 4px;
-}
-
-.status-message {
-  font-size: 14px;
-  color: #6b7280;
-}
-
-.status-time {
-  font-size: 12px;
-  color: #9ca3af;
-  margin-top: 4px;
-}
-
-.status-indicator {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #ef4444;
-  animation: blink 2s ease-in-out infinite;
-  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
-}
-
-.status-indicator.indicator-active {
-  background: #10b981;
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-/* Glass Card */
-.glass-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  transition: all 0.3s ease;
-}
-
-.glass-card:hover {
-  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-  transform: translateY(-2px);
-}
-
-.glass-card :deep(.n-card-header) {
-  padding: 20px 24px;
-  font-size: 18px;
-  font-weight: 600;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-}
-
-.glass-card :deep(.n-card__content) {
-  padding: 24px;
-}
-
-/* Modal Dialog Styles */
-:deep(.n-dialog) {
-  max-width: 520px;
-}
-
-:deep(.n-dialog__title) {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-:deep(.n-form-item-label) {
-  font-weight: 500;
-  color: #374151;
-}
-
-:deep(.n-input__suffix) {
-  padding: 0;
-}
-
-:deep(.n-alert) {
-  border-radius: 8px;
-}
-
-/* Action Buttons */
-.action-btn {
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  transition: all 0.3s ease;
-}
-
-.action-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-}
-
-.start-btn {
-  flex: 1;
-}
-
-.stop-btn {
-  flex: 1;
-}
-
-/* Edit Textarea Styling */
-.edit-textarea {
-  width: 100%;
-}
-
-.edit-textarea :deep(textarea){
-  border: none !important;
-}
-
-.edit-textarea :deep(.n-input-wrapper) {
-  padding: 0;
-}
-
-.edit-textarea :deep(.n-input__border),
-.edit-textarea :deep(.n-input__state-border) {
-  border: none !important;
-  box-shadow: none !important;
-}
-
-.edit-textarea :deep(.n-input__textarea-el) {
-  font-family: 'VNF-ComicSans', 'Courier New', monospace !important;
-  font-size: 13px !important;
-  line-height: 1.6 !important;
-  color: #10b981 !important;
-  background: #1f2937 !important;
-  border-radius: 8px !important;
-  padding: 12px !important;
-  //border: 2px solid #374151 !important;
-  transition: all 0.3s ease;
-  min-height: 400px;
-}
-
-.edit-textarea :deep(.n-input__textarea-el):focus {
-  border-color: #10b981 !important;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
-  outline: none !important;
-}
-
-.edit-textarea :deep(.n-input__textarea-el)::selection {
-  background: rgba(16, 185, 129, 0.3);
-  color: #fff;
-}
-
-/* Scrollbar for textarea */
-.edit-textarea :deep(.n-input__textarea-el)::-webkit-scrollbar {
-  width: 8px;
-}
-
-.edit-textarea :deep(.n-input__textarea-el)::-webkit-scrollbar-track {
-  background: #374151;
-  border-radius: 4px;
-}
-
-.edit-textarea :deep(.n-input__textarea-el)::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 4px;
-}
-
-.edit-textarea :deep(.n-input__textarea-el)::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
-}
-
-/* Log Container */
-.log-card {
-  position: sticky;
-  top: 20px;
-}
-
-.log-content {
-  color: #10b981;
-  //font-family: 'Courier New', monospace;
-  font-family: 'Comic Neue', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 13px;
-  line-height: 1.6;
-  margin: 0;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  text-align: left;
-}
-
-.log-container {
-  background: #1f2937;
-  border-radius: 12px;
-  padding: 0;
-  max-height: 500px;
-  overflow-y: auto;
-}
-
-.log-lines {
-  padding: 8px 0;
-}
-
-.log-line-item {
-  padding: 6px 16px;
-  color: #10b981;
-  //font-family: 'Bangers', cursive;
-  font-family: 'VNF-ComicSans', cursive, sans-serif;
-  font-size: 13px;
-  line-height: 1.5;
-  border-bottom: 1px solid #374151; /* Đường viền phân cách rõ ràng */
-  text-align: left;
-}
-
-.log-line-item:last-child {
-  border-bottom: none; /* Không có viền ở dòng cuối */
-}
-
-/* Optional: Xen kẽ màu nền nhẹ để dễ nhìn hơn */
-.log-line-even {
-  background: rgba(55, 65, 81, 0.3);
-}
-
-.log-empty {
-  color: #10b981;
-  text-align: center;
-  padding: 20px 20px;
-  //font-style: italic;
-}
-
-/* File Grid */
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-
-.file-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-.file-card-item {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 12px;
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
-}
-
-.file-card-item:hover {
-  border-color: #667eea;
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
-}
-
-.file-icon {
-  font-size: 32px;
-  flex-shrink: 0;
-}
-
-.file-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.file-name {
-  font-weight: 600;
-  color: #1f2937;
-  font-size: 14px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 4px;
-}
-
-.file-meta {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-}
-
-.file-size {
-  color: #6b7280;
-}
-
-.file-date {
-  color: #9ca3af;
-}
-
-.file-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.action-icon-btn {
-  font-size: 20px;
-  padding: 8px;
-  transition: transform 0.2s ease;
-}
-
-.action-icon-btn:hover {
-  transform: scale(1.2);
-}
-
-.empty-state {
-  padding: 60px 20px;
-}
-
-/* Scrollbar */
-.log-container::-webkit-scrollbar {
-  width: 8px;
-}
-
-.log-container::-webkit-scrollbar-track {
-  background: #374151;
-  border-radius: 4px;
-}
-
-.log-container::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 4px;
-}
-
-.log-container::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
-}
-
-/* Mobile Styles */
 @media (max-width: 768px) {
   .header-section {
     padding: 16px;
@@ -1378,44 +560,6 @@ onUnmounted(() => {
   .content-wrapper {
     padding: 0 12px;
   }
-
-  .status-card {
-    padding: 16px;
-    gap: 12px;
-  }
-
-  .status-icon {
-    font-size: 36px;
-  }
-
-  .status-title {
-    font-size: 16px;
-  }
-
-  .status-message {
-    font-size: 13px;
-  }
-
-  .glass-card :deep(.n-card-header) {
-    padding: 16px;
-    font-size: 16px;
-  }
-
-  .glass-card :deep(.n-card__content) {
-    padding: 16px;
-  }
-
-  .file-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .log-container {
-    //max-height: 300px;
-  }
-
-  .log-content {
-    font-size: 12px;
-  }
 }
 
 @media (max-width: 480px) {
@@ -1433,14 +577,6 @@ onUnmounted(() => {
 
   .header-title h1 {
     font-size: 18px;
-  }
-
-  .status-card {
-    padding: 12px;
-  }
-
-  .file-card-item {
-    padding: 12px;
   }
 }
 </style>
