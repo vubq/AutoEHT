@@ -52,6 +52,9 @@
                 @stop="handleStop"
             />
 
+            <!-- Screen Viewer (Mobile only) -->
+            <ScreenViewer v-if="isMobile" />
+
             <!-- Log Viewer (Mobile only) -->
             <LogViewer
                 v-if="isMobile"
@@ -69,20 +72,26 @@
           </n-space>
         </n-gi>
 
-        <!-- Right Column: Log Viewer (Desktop only) -->
+        <!-- Right Column: Screen Viewer & Log Viewer (Desktop only) -->
         <n-gi v-if="!isMobile" :span="8">
-          <LogViewer
-              :content="logContent"
-              :current-filename="currentFilename"
-              :loading="logLoading"
-              :save-loading="saveLoading"
-              v-model:edit-content="editContent"
-              v-model:is-edit-mode="isEditMode"
-              :rows="20"
-              @toggle-edit="toggleEditMode"
-              @save="handleSaveEdit"
-              @clear="handleClearLog"
-          />
+          <n-space vertical :size="16">
+            <!-- Screen Viewer -->
+            <ScreenViewer />
+
+            <!-- Log Viewer -->
+            <LogViewer
+                :content="logContent"
+                :current-filename="currentFilename"
+                :loading="logLoading"
+                :save-loading="saveLoading"
+                v-model:edit-content="editContent"
+                v-model:is-edit-mode="isEditMode"
+                :rows="15"
+                @toggle-edit="toggleEditMode"
+                @save="handleSaveEdit"
+                @clear="handleClearLog"
+            />
+          </n-space>
         </n-gi>
 
         <!-- File Manager (Full width) -->
@@ -116,11 +125,13 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { NGrid, NGi, NSpace, NButton, useMessage, useDialog } from 'naive-ui'
-import autoService from '../api/autoService'
+import autoService from '../api/autoService.js'
+import screenService from '../api/screenService.js'
 
 // Import components
 import StatusCard from './StatusCard.vue'
 import ControlForm from './ControlForm.vue'
+import ScreenViewer from './ScreenViewer.vue'
 import LogViewer from './LogViewer.vue'
 import FileManager from './FileManager.vue'
 import CreateFileModal from './CreateFileModal.vue'
@@ -128,7 +139,7 @@ import CreateFileModal from './CreateFileModal.vue'
 const message = useMessage()
 const dialog = useDialog()
 
-// State
+// State (giữ nguyên code cũ)
 const loading = ref(false)
 const startLoading = ref(false)
 const stopLoading = ref(false)
@@ -166,9 +177,10 @@ const handleResize = () => {
   isMobile.value = window.innerWidth <= 768
 }
 
-// Methods
+// Methods (giữ nguyên tất cả methods cũ)
 const handleDomainChange = (value) => {
   autoService.setBaseUrl(value)
+  screenService.setBaseUrl(value) // Thêm dòng này
   message.info('Đã cập nhật domain server')
 }
 
@@ -462,6 +474,7 @@ let statusInterval = null
 
 onMounted(() => {
   autoService.setBaseUrl(domainServer.value)
+  screenService.setBaseUrl(domainServer.value) // Thêm dòng này
   checkStatus()
   handleLoadFiles()
 
@@ -478,6 +491,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Giữ nguyên tất cả CSS cũ */
 .auto-control-panel {
   min-height: 100vh;
   padding-bottom: 40px;
